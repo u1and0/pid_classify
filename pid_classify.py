@@ -134,7 +134,7 @@ def training(pid_master: PidMaster) -> PidClassify:
 
 ### main ###
 print("品番データを学習中...")
-master = load_data("../data/pidmaster.csv")
+master = load_data("./data/pidmaster.csv")
 classifier = training(master)
 # 学習の評価
 score = classifier.score()

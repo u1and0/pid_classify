@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pid_classify import classifier
 
 
 class Item(BaseModel):
@@ -47,7 +48,7 @@ async def create(item: Item):
     {"name":"AAA","model":"annonimous"}
     """
     print(f"received: {item}")
-    json_data = [item.name + str(i) for i in range(5)]
+    json_data = classifier.predict_mask_proba(item.name, item.model)
     print(f"transfer: {json_data}")
     return json_data
 
