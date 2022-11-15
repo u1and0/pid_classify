@@ -38,8 +38,8 @@ async def hello():
     return {"message": "Hello world"}
 
 
-@app.post("/item")
-async def create(item: Item):
+@app.post("/predict")
+async def predict(item: Item):
     """
     $ curl -H "Content-Type: application/json" \
     -d '{"name":"AAA", "model":"annonimous"}' \
@@ -50,6 +50,8 @@ async def create(item: Item):
     print(f"received: {item}")
     json_data = classifier.predict_mask_proba(item.name, item.model)
     print(f"transfer: {json_data}")
+    proba = classifier.predict_proba(item.name, item.model)
+    print(proba)  # 確率表示
     return json_data
 
 

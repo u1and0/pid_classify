@@ -13,7 +13,7 @@ async function postData(url: string, data: Record<string, unknown>) {
 
 // 入力欄に打った情報をJSONでポスト
 function postItem() {
-  const url = root.origin + "/item";
+  const url = root.origin + "/predict";
   const nameInput: HTMLInputElement = document.getElementById("name");
   const modelInput: HTMLInputElement = document.getElementById("model");
   const data = {
@@ -26,7 +26,7 @@ function postItem() {
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
       const h4 = document.createElement("h4");
-      h4.innerHTML = "AIが予測する品番は次のいずれかです。";
+      h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
       resultDiv.appendChild(h4);
       pidList.forEach((p: string) => {
         const badge = document.createElement("span");
