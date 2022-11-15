@@ -11,21 +11,23 @@ async function postData(url: string, data: Record<string, unknown>) {
   return resp.json();
 }
 
-const badgeColors = [
-  "bg-primary",
-  "bg-danger",
-  "bg-warning",
-  "bg-success",
-  "bg-secondary",
-];
-
-// 4以下ならその数字を返す
-// 4以上なら、再帰的にrounderに入って0,1,2,3,4のどれかを返す。
-function rounder(i: number): number {
-  if (i < badgeColors.length) {
-    return i;
+// iが0,1,2,3,4 のサイクリック
+// badge色を返す
+function badgeSelector(i: number): string {
+  const colors = [
+    "bg-primary",
+    "bg-danger",
+    "bg-warning",
+    "bg-success",
+    "bg-secondary",
+  ];
+  // iが4以下ならそのインデックスのcolorを返す
+  if (i < colors.length) {
+    return colors[i];
   }
-  return rounder(i);
+  // iが4以上なら、再帰的にbadgeSelectorに入って
+  // iが0,1,2,3,4のどれかになるまで続ける。
+  return badgeSelector(i - colors.length);
 }
 
 // 入力欄に打った情報をJSONでポスト
@@ -48,8 +50,7 @@ function postItem() {
       resultDiv.appendChild(h4);
       pidList.forEach((p: string, i: number) => {
         const badge = document.createElement("span");
-        const j = rounder(i); // 0,1,2,3,4 のサイクリック
-        badge.classList.add("badge", "rounded-pill", badgeColors[j]); // Bootstrap Badge
+        badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
         badge.innerHTML = p;
         resultDiv.appendChild(badge);
       });
