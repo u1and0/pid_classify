@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 from collections import namedtuple
+from dataclasses import dataclass
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
@@ -20,59 +21,61 @@ def load_data(datapath: str) -> PidMaster:
     return PidMaster(name, types, pid_category)
 
 
-def predict_pid(clf: MultinomialNB, vectorizer: HashingVectorizer,
-                le: LabelEncoder, name: str) -> str:
-    """
-    適当な品名 name を入れて、
-    学習機により提案された品番カテゴリを一つ返す
-    学習済みの学習機clfを引数に取る。
-    """
-    vec = vectorizer.fit_transform([name])
-    category_idx = clf.predict(vec)
-    predict_pid = le.inverse_transform(category_idx)
-    return predict_pid[0]
+@dataclass
+class PidClassify:
+    clf: MultinomialNB
+    vectorizer: HashingVectorizer
+    le: LabelEncoder
+
+    def predict_pid(self, clf: MultinomialNB, vectorizer: HashingVectorizer,
+                    le: LabelEncoder, name: str) -> str:
+        """
+        適当な品名 name を入れて、
+        学習機により提案された品番カテゴリを一つ返す
+        学習済みの学習機clfを引数に取る。
+        """
+        vec = self.vectorizer.fit_transform([name])
+        category_idx = self.clf.predict(vec)
+        predict_pid = self.le.inverse_transform(category_idx)
+        return predict_pid[0]
+
+    # MultinominalNBクラスのメソッドとしてpredict_pidを登録
+    # clf.predict_pid(name)として実行できる
+    # setattr(MultinomialNB, "predict_pid", predict_pid)
+
+    def prob_series(self,
+                    clf: MultinomialNB,
+                    vectorizer: HashingVectorizer,
+                    le: LabelEncoder,
+                    name: str,
+                    top: int = 5) -> pd.Series:
+        """適当な品名nameが属する品番カテゴリの上位 top件を返す"""
+        vec = self.vectorizer.fit_transform([name])
+        prob = self.clf.predict_proba(vec)
+        index = self.le.inverse_transform(self.clf.classes_)
+        se = pd.Series(prob[0], index).sort_values(ascending=False)
+        return se[:top]
+
+    # MultinominalNBクラスのメソッドとしてpredict_pidを登録
+    # clf.predict_pid(name)として実行できる
+    # setattr(MultinomialNB, "prob_series", prob_series)
+
+    @staticmethod
+    def pid_mask_probability(pid_series: pd.Series,
+                             threshold=0.95) -> list[str]:
+        """品番のサジェスト確率の累計がthresholdを超えるまでのリストを返す"""
+        se_iter = pid_series.iteritems()
+        predict_list = []
+        cumsum_percentile = 0
+        # 確率の合計が閾値を超えるまでイテレート
+        while cumsum_percentile < threshold:
+            pid, prob = next(se_iter)
+            cumsum_percentile += prob
+            predict_list.append(pid)
+        return predict_list
 
 
-# MultinominalNBクラスのメソッドとしてpredict_pidを登録
-# clf.predict_pid(name)として実行できる
-setattr(MultinomialNB, "predict_pid", predict_pid)
-
-
-def prob_series(clf: MultinomialNB,
-                vectorizer: HashingVectorizer,
-                le: LabelEncoder,
-                name: str,
-                top: int = 5) -> pd.Series:
-    """適当な品名nameが属する品番カテゴリの上位 top件を返す"""
-    vec = vectorizer.fit_transform([name])
-    prob = clf.predict_proba(vec)
-    index = le.inverse_transform(clf.classes_)
-
-    se = pd.Series(prob[0], index).sort_values(ascending=False)
-    return se[:top]
-
-
-# MultinominalNBクラスのメソッドとしてpredict_pidを登録
-# clf.predict_pid(name)として実行できる
-setattr(MultinomialNB, "prob_series", prob_series)
-
-
-def pid_mask_probability(pid_series: pd.Series, threshold=0.95) -> list[str]:
-    """品番のサジェスト確率の累計がthresholdを超えるまでのリストを返す"""
-    se_iter = pid_series.iteritems()
-    predict_list = []
-    cumsum_percentile = 0
-    # 確率の合計が閾値を超えるまでイテレート
-    while cumsum_percentile < threshold:
-        pid, prob = next(se_iter)
-        cumsum_percentile += prob
-        predict_list.append(pid)
-    return predict_list
-
-
-if __name__ == "__main__":
-    master = load_data("../data/pidmaster.csv")
-
+def training(pid_master: PidMaster):
     # テキストをtrigram特徴量に変換
     vectorizer = HashingVectorizer(
         n_features=2**16,
@@ -82,12 +85,12 @@ if __name__ == "__main__":
         norm=None)
 
     # 品名 / 型式をタブ区切り
-    X = vectorizer.fit_transform(f"{n}\t{m}"
-                                 for n, m in zip(master.names, master.models))
+    X = vectorizer.fit_transform(
+        f"{n}\t{m}" for n, m in zip(pid_master.names, pid_master.models))
 
     # カテゴリ文字列を数値に変換
     le = LabelEncoder()
-    y = le.fit_transform(master.categories)
+    y = le.fit_transform(pid_master.categories)
 
     # データをトレーニング用、テスト用に分割します。
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
@@ -100,6 +103,12 @@ if __name__ == "__main__":
     score = clf.score(X_test, y_test)
     assert 0.60 < score < 0.99, "適切な精度で学習できていません。"
     print(f"学習精度 {score:.4}で学習を完了しました。")
+    return PidClassify(clf, vectorizer, le)
+
+
+if __name__ == "__main__":
+    master = load_data("../data/pidmaster.csv")
+    classifier = training(master)
 
     # Usage
     #
