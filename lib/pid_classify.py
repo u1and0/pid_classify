@@ -1,4 +1,34 @@
 #!/usr/bin/env python3
+"""品番カテゴリ分類ライブラリ
+Usage
+
+品番カテゴリ分類器クラスをインポートします。
+インポートした時点で学習を完了しています。
+>>> from lib.pid_classify import classifier
+品番データを学習中...
+学習精度 0.7618で学習を完了しました。
+>>> n = "ブレーカ", "BBW351"
+
+品名と型式の組から、学習器により提案された品番カテゴリを一つ返します。
+>>> classifier.predict(*n)
+'SCA'
+
+品名と型式の組から想定される品番カテゴリ確率の上位を返します。
+デフォルトでは上位5件を返します。
+>>> classifier.predict_proba(*n)
+SCA    0.905975
+KCD    0.065212
+ABA    0.024902
+GAA    0.002606
+AZB    0.000705
+dtype: float64
+
+品名と型式の組から想定される品番カテゴリを複数返します。
+デフォルトでは累計0.95になるまでの確率の上位順リストを返します。
+>>> classifier.predict_mask_proba(*n)
+['SCA', 'KCD']
+"""
+
 import os
 from collections import namedtuple
 from dataclasses import dataclass
@@ -45,7 +75,9 @@ class PidClassify:
         return predict_pid[0]
 
     def predict_proba(self, name, model: str, top: int = 5) -> pd.Series:
-        """品名と型式の組から想定される品番カテゴリの上位 top件を返す"""
+        """ 品名と型式の組から想定される
+        品番カテゴリ確率の上位 top件を返す
+        """
         namemodel = f"{name}\t{model}"
         vec = self.vectorizer.fit_transform([namemodel])
         prob = self.clf.predict_proba(vec)
@@ -101,25 +133,10 @@ def training(pid_master: PidMaster) -> PidClassify:
 
 
 ### main ###
+print("品番データを学習中...")
 master = load_data("../data/pidmaster.csv")
 classifier = training(master)
 # 学習の評価
 score = classifier.score()
 assert 0.60 < score < 0.99, "適切な精度で学習できていません。"
 print(f"学習精度 {score:.4}で学習を完了しました。")
-
-# Usage
-#
-# se = clf.predict_proba(vectorizer, le, name="ブレーカ\tBBW351", top=100)
-# print(se)
-# predict_noproba(se)
-#
-#
-# 同じインターフェースで、上位5件を順位付きで表示しました。
-# 確率が分散しているので、上位5件を超えたところで閾値を超えためです。
-#
-# 順位すらいらない、不要な情報だ、ということであれば、listをsetにすればいいだけです。
-#
-#
-# predict_set = set(predict_noproba(se))
-# print(f"品名: ブレーカ 型式:BBW351 の品番は95%以上の確率で{predict_set}のいずれかです。")
