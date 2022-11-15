@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
 import os
+from collections import namedtuple
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import classification_report
+
+PidMaster = namedtuple("PidMaster", ["names", "models", "categories"])
+
+
+def load_data(datapath: str) -> PidMaster:
+    cwd = os.path.dirname(__file__)
+    df = pd.read_csv(cwd + "/" + datapath)
+    pid = df["品番"].values
+    name = df["品名"].values
+    types = df["型式"].values
+    pid_category = [i.split("-")[0] for i in pid]
+    return PidMaster(name, types, pid_category)
 
 
 def predict_pid(clf: MultinomialNB, vectorizer: HashingVectorizer,
@@ -59,14 +71,7 @@ def pid_mask_probability(pid_series: pd.Series, threshold=0.95) -> list[str]:
 
 
 if __name__ == "__main__":
-    cwd = os.path.dirname(__file__)
-    df = pd.read_csv(cwd + "/../data/pidmaster.csv")
-
-    pid = df["品番"].values
-    name = df["品名"].values
-    types = df["型式"].values
-    pid_category = [i.split("-")[0] for i in pid]
-    df["カテゴリ"] = pid_category
+    master = load_data("../data/pidmaster.csv")
 
     # テキストをtrigram特徴量に変換
     vectorizer = HashingVectorizer(
@@ -77,11 +82,12 @@ if __name__ == "__main__":
         norm=None)
 
     # 品名 / 型式をタブ区切り
-    X = vectorizer.fit_transform(f"{n}\t{t}" for n, t in zip(name, types))
+    X = vectorizer.fit_transform(f"{n}\t{m}"
+                                 for n, m in zip(master.names, master.models))
 
     # カテゴリ文字列を数値に変換
     le = LabelEncoder()
-    y = le.fit_transform(pid_category)
+    y = le.fit_transform(master.categories)
 
     # データをトレーニング用、テスト用に分割します。
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
