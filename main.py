@@ -64,6 +64,15 @@ async def predict(item: Item):
 
 @app.get("/pid/{pid}")
 async def pid(pid: str):
+    """指定品番のレコードを返す
+    $ curl localhost:8880/pid/AAA-1001
+    {
+        AAA-1001: {
+            品名: "シリンダ",
+            型式: "QB764"
+        }
+    }
+    """
     try:
         return master.loc[pid].to_dict()
     except KeyError:
@@ -73,6 +82,19 @@ async def pid(pid: str):
 
 @app.get("/category/{class_}")
 async def category(class_: str):
+    """指定カテゴリに属するレコードを返す
+    $ curl localhost:8880/category/AAA
+    {
+        AAA-1: {
+            品名: "シリンダ",
+            型式: "A745"
+        },
+        AAA-2: {
+            品名: "シリンダ",
+            型式: "B153"
+        }
+    }
+    """
     obj = master[master["カテゴリ"] == class_].T.to_dict()
     if len(obj) < 1:
         content = {"error": f"{class_} is not exist"}
