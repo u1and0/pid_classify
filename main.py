@@ -51,15 +51,13 @@ async def predict(item: Item):
     """ classifierへJSONポストし、品番カテゴリ予測をJSONで受け取る
     $ curl -H "Content-Type: application/json" \
         -d '{"name":"AAA", "model":"annonimous"}' \
-        localhost:8880/item
+        localhost:8880/predict
     ["AAA", "ZBA"]
     """
     print(f"received: {item}")
-    json_list = classifier.predict_mask_proba(item.name, item.model)
-    print(f"transfer: {json_list}")
-    proba = classifier.predict_proba(item.name, item.model)
-    print(proba)  # 確率表示
-    return json_list
+    predict_dict = classifier.predict_proba(item.name, item.model)
+    print(f"transfer: {predict_dict}")
+    return predict_dict
 
 
 @app.get("/pid/{pid}")

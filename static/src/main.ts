@@ -1,6 +1,16 @@
+// type Item = {
+//   "品名": string,
+//   "型式": string,
+// }
+// type Row = Record<string,Item>
+type Query = {
+  name: string;
+  model: string;
+};
+type Label = Map<string, number>;
 const root: URL = new URL(window.location.href);
 
-async function postData(url: string, data: Record<string, unknown>) {
+async function postData(url: string, data: Query) {
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -34,24 +44,30 @@ function badgeSelector(i: number): string {
 function postItem() {
   const url = root.origin + "/predict";
   const nameInput: HTMLInputElement = document.getElementById("name");
+  if (nameInput === null) return;
   const modelInput: HTMLInputElement = document.getElementById("model");
+  if (modelInput === null) return;
   const data = {
     "name": nameInput.value,
     "model": modelInput.value,
   };
   postData(url, data)
-    .then((pidList: string[]) => {
-      console.log(pidList); // DEBUG
+    .then((pidMap: Label) => {
+      console.log(pidMap); // DEBUG
       const resultDiv = document.getElementById("result");
+      if (resultDiv === null) return;
       resultDiv.innerHTML = ""; // Reset result div
       const h4 = document.createElement("h4");
       h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
       resultDiv.appendChild(h4);
-      pidList.forEach((p: string, i: number) => {
+      Object.keys(pidMap).forEach((pid: string, i: number) => {
         const badge = document.createElement("button");
+        if (badge === null) return;
+        const proba = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
         badge.setAttribute("type", "button");
+        badge.setAttribute("title", `予測確率${proba}%`);
         badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
-        badge.innerHTML = p; // PID カテゴリ
+        badge.innerHTML = pid; // PID カテゴリ
         resultDiv.appendChild(badge);
       });
     })
