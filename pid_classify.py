@@ -39,18 +39,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 
 # PidMaster : 学習データ(品名、型式)、教師データ(品番カテゴリ)のデータコンテナ
-PidMaster = namedtuple("PidMaster", ["names", "models", "categories"])
+# PidMaster = namedtuple("PidMaster", ["names", "models", "categories"])
 
 
-def load_data(datapath: str) -> PidMaster:
+def load_data(datapath: str) -> pd.DataFrame:
     """csvファイルを読み込んで品番マスタデータを返す"""
     cwd = os.path.dirname(__file__)
-    df = pd.read_csv(cwd + "/" + datapath)
-    pid = df["品番"].values
-    names = df["品名"].values
-    models = df["型式"].values
-    categories = [i.split("-")[0] for i in pid]
-    return PidMaster(names, models, categories)
+    df = pd.read_csv(cwd + "/" + datapath, index_col=0, usecols=[0, 1, 2])
+    df["カテゴリ"] = [i.split("-")[0] for i in df.index]
+    return df.loc[:, ["カテゴリ", "品名", "型式"]]
 
 
 @dataclass
@@ -109,7 +106,7 @@ class PidClassify:
         return self.clf.score(self.X_test, self.y_test)
 
 
-def training(pid_master: PidMaster) -> PidClassify:
+def training(pid_master: pd.DataFrame) -> PidClassify:
     """品番データを学習して学習器を生成する"""
     # テキストをtrigram特徴量に変換
     vectorizer = HashingVectorizer(
@@ -120,10 +117,10 @@ def training(pid_master: PidMaster) -> PidClassify:
         norm=None)
     # 品名 / 型式をタブ区切り
     X = vectorizer.fit_transform(
-        f"{n}\t{m}" for n, m in zip(pid_master.names, pid_master.models))
+        f"{n}\t{m}" for n, m in zip(pid_master["品名"], pid_master["型式"]))
     # カテゴリ文字列を数値に変換
     le = LabelEncoder()
-    y = le.fit_transform(pid_master.categories)
+    y = le.fit_transform(pid_master["カテゴリ"].values)
     # データをトレーニング用、テスト用に分割します。
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
     # ナイーブベイズにより学習させます。
@@ -134,9 +131,9 @@ def training(pid_master: PidMaster) -> PidClassify:
 
 ### main ###
 print("品番データを学習中...")
-master = load_data("./data/pidmaster.csv")
+master: pd.DataFrame = load_data("./data/pidmaster.csv")
 classifier = training(master)
 # 学習の評価
 score = classifier.score()
-assert 0.60 < score < 0.99, "適切な精度で学習できていません。"
 print(f"学習精度 {score:.4}で学習を完了しました。")
+assert 0.60 < score < 1, "適切な精度で学習できていません。"

@@ -8,12 +8,12 @@ $ conda install -c uvicorn fastapi jinja2
 """
 from typing import Union
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pid_classify import classifier
+from pid_classify import classifier, master
 
 
 class Item(BaseModel):
@@ -28,6 +28,13 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def root(request: Request):
+    """/indexへリダイレクト"""
+    return RedirectResponse("/index")
+
+
+@app.get("/index")
+async def index(request: Request):
+    """メインページ"""
     return templates.TemplateResponse("index.html", {
         "request": request,
     })
@@ -35,24 +42,42 @@ async def root(request: Request):
 
 @app.get("/hello")
 async def hello():
-    return {"message": "Hello world"}
+    """サーバー生きているか確認"""
+    return {"message": "品番予測AI heart beat"}
 
 
 @app.post("/predict")
 async def predict(item: Item):
-    """
+    """ classifierへJSONポストし、品番カテゴリ予測をJSONで受け取る
     $ curl -H "Content-Type: application/json" \
-    -d '{"name":"AAA", "model":"annonimous"}' \
-    localhost:8880/item
-
-    {"name":"AAA","model":"annonimous"}
+        -d '{"name":"AAA", "model":"annonimous"}' \
+        localhost:8880/item
+    ["AAA", "ZBA"]
     """
     print(f"received: {item}")
-    json_data = classifier.predict_mask_proba(item.name, item.model)
-    print(f"transfer: {json_data}")
+    json_list = classifier.predict_mask_proba(item.name, item.model)
+    print(f"transfer: {json_list}")
     proba = classifier.predict_proba(item.name, item.model)
     print(proba)  # 確率表示
-    return json_data
+    return json_list
+
+
+@app.get("/pid/{pid}")
+async def pid(pid: str):
+    try:
+        return master.loc[pid].to_dict()
+    except KeyError:
+        content = {"error": f"{pid} is not exist"}
+        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+
+
+@app.get("/category/{class_}")
+async def category(class_: str):
+    obj = master[master["カテゴリ"] == class_].T.to_dict()
+    if len(obj) < 1:
+        content = {"error": f"{class_} is not exist"}
+        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+    return obj
 
 
 if __name__ == "__main__":
