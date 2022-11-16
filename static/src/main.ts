@@ -61,6 +61,7 @@ function postItem() {
       h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
       resultDiv.appendChild(h4);
       Object.keys(pidMap).forEach((pid: string, i: number) => {
+        // pidMap = new Label(pidObj) TODO
         const badge = document.createElement("button");
         if (badge === null) return;
         const proba = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
@@ -68,10 +69,24 @@ function postItem() {
         badge.setAttribute("title", `予測確率${proba}%`);
         badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
         badge.innerHTML = pid; // PID カテゴリ
+        badge.setAttribute("onclick", "getItem(this.textContent)");
         resultDiv.appendChild(badge);
       });
     })
     .catch((e: Error) => {
       console.error(e);
     });
+}
+
+// ボタンクリックでカテゴリ検索をかけて類似品番を表示する
+async function getItem(pidClass: string) {
+  const url = root.origin + "/category/" + pidClass;
+  const json = await fetch(url)
+    .then((resp) => {
+      return resp.json();
+    })
+    .catch((resp) => {
+      return new Error(`error: ${resp.status}`);
+    });
+  console.log(json);
 }

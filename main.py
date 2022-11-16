@@ -93,10 +93,11 @@ async def category(class_: str):
         }
     }
     """
-    obj = master[master["カテゴリ"] == class_].T.to_dict()
-    if len(obj) < 1:
+    select = master[master["カテゴリ"] == class_].head(10)
+    if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+    obj = select.T.to_dict()
     return obj
 
 
