@@ -14,14 +14,19 @@ Usage
 'SCA'
 
 品名と型式の組から想定される品番カテゴリ確率の上位を返します。
-デフォルトでは上位5件を返します。
->>> classifier.predict_proba(*n)
+>>> classifier._predict_proba_series(*n).head(5)
 SCA    0.905975
 KCD    0.065212
 ABA    0.024902
 GAA    0.002606
 AZB    0.000705
 dtype: float64
+
+品名と型式の組から想定される品番カテゴリを複数返します。
+デフォルトでは累計0.95になるまでの確率のディクショナリを返します。
+
+>>> classifier.predict_proba(*n)
+{'SCA': 0.9059745176959081, 'KCD': 0.06521197399595013}
 
 品名と型式の組から想定される品番カテゴリを複数返します。
 デフォルトでは累計0.95になるまでの確率の上位順リストを返します。
@@ -71,16 +76,36 @@ class PidClassify:
         predict_pid = self.le.inverse_transform(category_idx)
         return predict_pid[0]
 
-    def predict_proba(self, name, model: str, top: int = 5) -> pd.Series:
+    def _predict_proba_series(self, name, model: str) -> pd.Series:
         """ 品名と型式の組から想定される
-        品番カテゴリ確率の上位 top件を返す
+        品番カテゴリ確率を返す
         """
         namemodel = f"{name}\t{model}"
         vec = self.vectorizer.fit_transform([namemodel])
         prob = self.clf.predict_proba(vec)
         index = self.le.inverse_transform(self.clf.classes_)
         se = pd.Series(prob[0], index).sort_values(ascending=False)
-        return se[:top]
+        return se
+
+    def predict_proba(self,
+                      name: str,
+                      model: str,
+                      top=100,
+                      threshold=0.95) -> dict[str:float]:
+        """ 品名と型式の組から想定される品番カテゴリを複数返す。
+        デフォルトでは累計thresholdになるまでの
+        確率の上位順ディクショナリを返す。
+        """
+        pid_series = self._predict_proba_series(name, model).head(top)
+        se_iter = pid_series.iteritems()
+        predict_dict = {}
+        cumsum_percentile = 0
+        # 確率の合計が閾値を超えるまでイテレート
+        while cumsum_percentile < threshold:
+            pid, prob = next(se_iter)
+            cumsum_percentile += prob
+            predict_dict[pid] = prob
+        return predict_dict
 
     def predict_mask_proba(self,
                            name: str,
@@ -88,18 +113,11 @@ class PidClassify:
                            top=100,
                            threshold=0.95) -> list[str]:
         """ 品名と型式の組から想定される品番カテゴリを複数返す。
-        品番のサジェスト確率の累計がthresholdを超えるまでのリストを返す
+        デフォルトでは累計thresholdになるまでの
+        確率の上位順リストを返す。
         """
-        pid_series = self.predict_proba(name, model, top)
-        se_iter = pid_series.iteritems()
-        predict_list = []
-        cumsum_percentile = 0
-        # 確率の合計が閾値を超えるまでイテレート
-        while cumsum_percentile < threshold:
-            pid, prob = next(se_iter)
-            cumsum_percentile += prob
-            predict_list.append(pid)
-        return predict_list
+        dic = self.predict_proba(name, model, top, threshold)
+        return list(dic.keys())
 
     def score(self):
         """テストデータによるスコア算出"""
