@@ -39,19 +39,19 @@ function postItem() {
     "name": nameInput.value,
     "model": modelInput.value,
   };
-  let j = 0;
   postData(url, data)
     .then((pidList: string[]) => {
       console.log(pidList); // DEBUG
       const resultDiv = document.getElementById("result");
-      resultDiv.innerHTML = "";
+      resultDiv.innerHTML = ""; // Reset result div
       const h4 = document.createElement("h4");
       h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
       resultDiv.appendChild(h4);
       pidList.forEach((p: string, i: number) => {
-        const badge = document.createElement("span");
+        const badge = document.createElement("button");
+        badge.setAttribute("type", "button");
         badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
-        badge.innerHTML = p;
+        badge.innerHTML = p; // PID カテゴリ
         resultDiv.appendChild(badge);
       });
     })
