@@ -6,7 +6,8 @@ pid_classifyのwebインターフェース
 Setup env
 $ conda install -c uvicorn fastapi jinja2
 """
-from typing import Union
+from typing import Optional
+import pandas as pd
 import uvicorn
 from fastapi import FastAPI, Request, status
 from pydantic import BaseModel
@@ -17,8 +18,11 @@ from pid_classify import classifier, master
 
 
 class Item(BaseModel):
-    name: str
-    model: Union[str, None] = None
+    """フロントエンドで定義したItem型のJSONデータ形式
+    { "name":"パッキン", "model":"174-452024-001"}
+    """
+    name: Optional[str] = None
+    model: Optional[str] = None
 
 
 app = FastAPI()
@@ -26,8 +30,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+def to_object(df: pd.DataFrame) -> dict[str, Item]:
+    """ DataFrameをItem型へ変換"""
+    renamer = {"品名": "name", "型式": "model"}
+    renamed = df.rename(renamer, axis=1).loc[:, ["name", "model"]]
+    return renamed.T.to_dict()
+
+
 @app.get("/")
-async def root(request: Request):
+async def root():
     """/indexへリダイレクト"""
     return RedirectResponse("/index")
 
@@ -60,8 +71,8 @@ async def predict(item: Item):
     return predict_dict
 
 
-@app.get("/pid/{pid}")
-async def pid(pid: str):
+@app.get("/pid/{parts_num}")
+async def pid(parts_num: str):
     """指定品番のレコードを返す
     $ curl localhost:8880/pid/AAA-1001
     {
@@ -71,10 +82,13 @@ async def pid(pid: str):
         }
     }
     """
+    print(f"received: {parts_num}")
     try:
-        return master.loc[pid].to_dict()
+        obj = master.loc[parts_num].to_dict()
+        print(f"transfer: {obj}")
+        return obj
     except KeyError:
-        content = {"error": f"{pid} is not exist"}
+        content = {"error": f"{parts_num} is not exist"}
         return JSONResponse(content, status.HTTP_404_NOT_FOUND)
 
 
@@ -84,22 +98,52 @@ async def category(class_: str):
     $ curl localhost:8880/category/AAA
     {
         AAA-1: {
-            品名: "シリンダ",
-            型式: "A745"
+            name: "シリンダ",
+            model: "A745"
         },
         AAA-2: {
-            品名: "シリンダ",
-            型式: "B153"
+            name: "シリンダ",
+            model: "B153"
         }
     }
     """
+    print(f"received: {class_}")
     select = master[master["カテゴリ"] == class_].sample(10)
     if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_404_NOT_FOUND)
-    renamer = {"品名": "name", "型式": "model"}
-    renamed = select.rename(renamer, axis=1).loc[:, ["name", "model"]]
-    obj = renamed.T.to_dict()
+    obj = to_object(select)
+    print(f"transfer: {obj}")
+    return obj
+
+
+@app.get("/search")
+async def search(name: Optional[str] = None, model: Optional[str] = None):
+    """品名、または型式、あるいはその両方から品番マスタを検索し
+    JSONとしてレコードを返す。
+    # マルチバイト文字はURLエンコードの必要あるので
+    # このコードはそのままではエラー
+    $ curl localhost:8880/search?name=パッキン&model=174-452024-001
+    {
+        "GFB-9":{
+            "name":"パッキン",
+            "model":"174-452024-001"
+            }
+    }
+    """
+    print(f"received: name={name} model={model}")
+    dname = master["品名"] == name
+    if name is None:  # None なら全てTrueのSeries
+        dname = ~dname
+    dmodel = master["型式"] == model
+    if model is None:  # None なら全てTrueのSeries
+        dmodel = ~dmodel
+    select = master[dname & dmodel]
+    if len(select) < 1:
+        content = {"error": f"name={name} model={model} is not exist"}
+        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+    obj = to_object(select)
+    print(f"transfer: {obj}")
     return obj
 
 
