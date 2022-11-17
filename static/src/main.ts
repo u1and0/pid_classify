@@ -1,13 +1,10 @@
-// type Item = {
-//   "品名": string,
-//   "型式": string,
-// }
 type Item = {
   name: string;
   model: string;
 };
-type Label = Map<string, number>;
+// 最上位のURL
 const root: URL = new URL(window.location.href);
+// index.htmlの要素
 const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
 
@@ -51,7 +48,7 @@ function postItem() {
     "model": modelInput.value,
   };
   postData(url, data)
-    .then((pidMap: Label) => {
+    .then((pidMap: Map<string, number>) => {
       console.debug(pidMap); // DEBUG
       if (resultDiv === null) return;
       resultDiv.innerHTML = ""; // Reset result div
@@ -67,6 +64,7 @@ function postItem() {
         badge.setAttribute("title", `予測確率${proba}%`);
         badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
         badge.innerHTML = pid; // PID カテゴリ
+        // クリックすると類似品番を表示するjsを配置
         badge.setAttribute("onclick", "getItem(this.textContent)");
         resultDiv.appendChild(badge);
       });
@@ -75,6 +73,8 @@ function postItem() {
       console.error(e);
     });
 }
+
+/* 類似品番テーブルの表示 */
 
 // テーブルヘッダーの作成
 function createHeader(
@@ -108,6 +108,7 @@ async function getItem(pidClass: string) {
     });
   const items: Map<string, Item> = new Map(Object.entries(json));
   console.debug(items);
+  if (exampleTable === null) return;
   exampleTable.innerHTML = ""; // Reset table
   // Write table header
   createHeader(
@@ -125,5 +126,5 @@ async function getItem(pidClass: string) {
     td = tr.insertCell();
     td.appendChild(document.createTextNode(v.model));
   });
-  exampleTable?.appendChild(tbody);
+  exampleTable.appendChild(tbody);
 }
