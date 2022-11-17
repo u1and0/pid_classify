@@ -2,15 +2,16 @@
 //   "品名": string,
 //   "型式": string,
 // }
-// type Row = Record<string,Item>
-type Query = {
+type Item = {
   name: string;
   model: string;
 };
 type Label = Map<string, number>;
 const root: URL = new URL(window.location.href);
+const resultDiv = document.getElementById("result");
+const exampleTable = document.getElementById("example-table");
 
-async function postData(url: string, data: Query) {
+async function postData(url: string, data: Item) {
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -44,17 +45,14 @@ function badgeSelector(i: number): string {
 function postItem() {
   const url = root.origin + "/predict";
   const nameInput: HTMLInputElement = document.getElementById("name");
-  if (nameInput === null) return;
   const modelInput: HTMLInputElement = document.getElementById("model");
-  if (modelInput === null) return;
   const data = {
     "name": nameInput.value,
     "model": modelInput.value,
   };
   postData(url, data)
     .then((pidMap: Label) => {
-      console.log(pidMap); // DEBUG
-      const resultDiv = document.getElementById("result");
+      console.debug(pidMap); // DEBUG
       if (resultDiv === null) return;
       resultDiv.innerHTML = ""; // Reset result div
       const h4 = document.createElement("h4");
@@ -78,6 +76,26 @@ function postItem() {
     });
 }
 
+// テーブルヘッダーの作成
+function createHeader(
+  table: HTMLTableElement,
+  header: string[],
+  caption: string,
+): HTMLTableSectionElement {
+  // Write table caption
+  const captionElem = table.createCaption();
+  captionElem.textContent = caption;
+  // Write table header
+  const theadElem = table.createTHead();
+  const tr = theadElem.insertRow();
+  header.forEach((cell: string) => {
+    const th = document.createElement("th"); // th要素の追加
+    th.appendChild(document.createTextNode(cell)); // thにテキスト追加
+    tr.appendChild(th); // thをtrへ追加
+  });
+  table.appendChild(theadElem);
+}
+
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
 async function getItem(pidClass: string) {
   const url = root.origin + "/category/" + pidClass;
@@ -88,5 +106,24 @@ async function getItem(pidClass: string) {
     .catch((resp) => {
       return new Error(`error: ${resp.status}`);
     });
-  console.log(json);
+  const items: Map<string, Item> = new Map(Object.entries(json));
+  console.debug(items);
+  exampleTable.innerHTML = ""; // Reset table
+  // Write table header
+  createHeader(
+    exampleTable, // table element
+    ["品番", "品名", "型式"], // header
+    `${pidClass}カテゴリに属する品名、型式`,
+  ); // caption
+  const tbody = document.createElement("tbody");
+  items.forEach((v: Item, k: string) => {
+    const tr = tbody.insertRow();
+    let td = tr.insertCell();
+    td.appendChild(document.createTextNode(k));
+    td = tr.insertCell();
+    td.appendChild(document.createTextNode(v.name));
+    td = tr.insertCell();
+    td.appendChild(document.createTextNode(v.model));
+  });
+  exampleTable?.appendChild(tbody);
 }

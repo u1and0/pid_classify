@@ -93,11 +93,13 @@ async def category(class_: str):
         }
     }
     """
-    select = master[master["カテゴリ"] == class_].head(10)
+    select = master[master["カテゴリ"] == class_].sample(10)
     if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_404_NOT_FOUND)
-    obj = select.T.to_dict()
+    renamer = {"品名": "name", "型式": "model"}
+    renamed = select.rename(renamer, axis=1).loc[:, ["name", "model"]]
+    obj = renamed.T.to_dict()
     return obj
 
 
