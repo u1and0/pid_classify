@@ -93,9 +93,9 @@ async def pid(parts_num: str):
 
 
 @app.get("/category/{class_}")
-async def category(class_: str):
-    """指定カテゴリに属するレコードを返す
-    $ curl localhost:8880/category/AAA
+async def category(class_: str, limit: int = 10):
+    """指定カテゴリに属するレコードをランダムにlimit件返す
+    $ curl localhost:8880/category/AAA&limit=2
     {
         AAA-1: {
             name: "シリンダ",
@@ -108,7 +108,7 @@ async def category(class_: str):
     }
     """
     print(f"received: {class_}")
-    select = master[master["カテゴリ"] == class_].sample(10)
+    select = master[master["カテゴリ"] == class_].sample(limit)
     if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_404_NOT_FOUND)
