@@ -8,6 +8,8 @@ const root: URL = new URL(window.location.href);
 const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
 
+/* 予測品番の表示 */
+
 async function postData(url: string, data: Item) {
   const resp = await fetch(url, {
     method: "POST",
@@ -38,6 +40,28 @@ function badgeSelector(i: number): string {
   return badgeSelector(i - colors.length);
 }
 
+// JSON responseを解決したら、品番カテゴリと予測確率をバッジとして表示する
+function showCategoryBadges(pidMap: Map<string, number>) {
+  console.debug(pidMap);
+  if (resultDiv === null) return;
+  resultDiv.innerHTML = ""; // Reset result div
+  const h4 = document.createElement("h4");
+  h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
+  resultDiv.appendChild(h4);
+  Object.keys(pidMap).forEach((pid: string, i: number) => {
+    const badge = document.createElement("button");
+    if (badge === null) return;
+    const proba = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
+    badge.setAttribute("type", "button");
+    badge.setAttribute("title", `予測確率${proba}%`);
+    badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
+    badge.innerHTML = pid; // PID カテゴリ
+    // クリックすると類似品番を表示するjsを配置
+    badge.setAttribute("onclick", "getItem(this.textContent)");
+    resultDiv.appendChild(badge);
+  });
+}
+
 // 入力欄に打った情報をJSONでポスト
 function postItem() {
   const url = root.origin + "/predict";
@@ -48,27 +72,7 @@ function postItem() {
     "model": modelInput.value,
   };
   postData(url, data)
-    .then((pidMap: Map<string, number>) => {
-      console.debug(pidMap); // DEBUG
-      if (resultDiv === null) return;
-      resultDiv.innerHTML = ""; // Reset result div
-      const h4 = document.createElement("h4");
-      h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
-      resultDiv.appendChild(h4);
-      Object.keys(pidMap).forEach((pid: string, i: number) => {
-        // pidMap = new Label(pidObj) TODO
-        const badge = document.createElement("button");
-        if (badge === null) return;
-        const proba = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
-        badge.setAttribute("type", "button");
-        badge.setAttribute("title", `予測確率${proba}%`);
-        badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
-        badge.innerHTML = pid; // PID カテゴリ
-        // クリックすると類似品番を表示するjsを配置
-        badge.setAttribute("onclick", "getItem(this.textContent)");
-        resultDiv.appendChild(badge);
-      });
-    })
+    .then(showCategoryBadges)
     .catch((e: Error) => {
       console.error(e);
     });
@@ -114,7 +118,7 @@ async function getItem(pidClass: string) {
   createHeader(
     exampleTable, // table element
     ["品番", "品名", "型式"], // header
-    `${pidClass}カテゴリに属する品名、型式`,
+    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`,
   ); // caption
   const tbody = document.createElement("tbody");
   items.forEach((v: Item, k: string) => {
