@@ -62,8 +62,26 @@ function showCategoryBadges(pidMap: Map<string, number>) {
   });
 }
 
+function checkRegistered(n: string, m: string) {
+  let url = root.origin + "/search?";
+  if (n !== "") {
+    url += `name=${n}`;
+  }
+  if (m !== "") {
+    url += `&model=${m}`;
+  }
+  getData(url)
+    .then((item: Map<string, Item>) => {
+      console.log(item);
+      return item;
+    })
+    .catch((e: Error) => {
+      console.error(e);
+    });
+}
+
 // 入力欄に打った情報をJSONでポスト
-function postItem() {
+async function postItem() {
   const url = root.origin + "/predict";
   const nameInput: HTMLInputElement = document.getElementById("name");
   const modelInput: HTMLInputElement = document.getElementById("model");
@@ -71,6 +89,7 @@ function postItem() {
     "name": nameInput.value,
     "model": modelInput.value,
   };
+  const registered = checkRegistered(data.name, data.model);
   postData(url, data)
     .then(showCategoryBadges)
     .catch((e: Error) => {
@@ -100,14 +119,19 @@ function createHeader(
   table.appendChild(theadElem);
 }
 
+async function getData(url: string) {
+  const resp = await fetch(url);
+  return resp.json();
+}
+
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
 async function getItem(pidClass: string) {
   const url = root.origin + "/category/" + pidClass;
   const json = await fetch(url)
-    .then((resp) => {
+    .then((resp: Promise<Record<string, Item>>) => {
       return resp.json();
     })
-    .catch((resp) => {
+    .catch((resp: Promise<Record<string, Item>>) => {
       return new Error(`error: ${resp.status}`);
     });
   const items: Map<string, Item> = new Map(Object.entries(json));
