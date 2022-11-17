@@ -74,13 +74,14 @@ async function checkRegistered(data: Item) {
     .then((resp: Response) => {
       return resp.json();
     })
-    // GET /search で品名型式検索
     .then((item: Map<string, Item>) => {
+      // GET /search で品名型式検索
       console.log(item);
       return item;
     })
-    .catch(async (e: Error) => {
-      console.error(e);
+    .catch(async () => {
+      // 品名、型式の登録がなければ
+      // POST /predict で品番予測
       const url = root.origin + "/predict";
       await postData(url, data)
         .then(showCategoryBadges)
@@ -121,11 +122,6 @@ function createHeader(
     tr.appendChild(th); // thをtrへ追加
   });
   table.appendChild(theadElem);
-}
-
-async function getData(url: string) {
-  const resp = await fetch(url);
-  return resp.json();
 }
 
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
