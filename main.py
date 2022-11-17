@@ -89,7 +89,7 @@ async def pid(parts_num: str):
         return obj
     except KeyError:
         content = {"error": f"{parts_num} is not exist"}
-        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/category/{class_}")
@@ -111,7 +111,7 @@ async def category(class_: str, limit: int = 10):
     select = master[master["カテゴリ"] == class_].sample(limit)
     if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
-        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
     obj = to_object(select)
     print(f"transfer: {obj}")
     return obj
@@ -141,7 +141,7 @@ async def search(name: Optional[str] = None, model: Optional[str] = None):
     select = master[dname & dmodel]
     if len(select) < 1:
         content = {"error": f"name={name} model={model} is not exist"}
-        return JSONResponse(content, status.HTTP_404_NOT_FOUND)
+        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
     obj = to_object(select)
     print(f"transfer: {obj}")
     return obj

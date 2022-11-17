@@ -62,39 +62,43 @@ function showCategoryBadges(pidMap: Map<string, number>) {
   });
 }
 
-function checkRegistered(n: string, m: string) {
+async function checkRegistered(data: Item) {
   let url = root.origin + "/search?";
-  if (n !== "") {
-    url += `name=${n}`;
+  if (data.name !== "") {
+    url += `name=${data.name}`;
   }
-  if (m !== "") {
-    url += `&model=${m}`;
+  if (data.model !== "") {
+    url += `&model=${data.model}`;
   }
-  getData(url)
+  await fetch(url)
+    .then((resp: Response) => {
+      return resp.json();
+    })
+    // GET /search で品名型式検索
     .then((item: Map<string, Item>) => {
       console.log(item);
       return item;
     })
-    .catch((e: Error) => {
+    .catch(async (e: Error) => {
       console.error(e);
+      const url = root.origin + "/predict";
+      await postData(url, data)
+        .then(showCategoryBadges)
+        .catch((e: Error) => {
+          console.error(e);
+        });
     });
 }
 
 // 入力欄に打った情報をJSONでポスト
 async function postItem() {
-  const url = root.origin + "/predict";
   const nameInput: HTMLInputElement = document.getElementById("name");
   const modelInput: HTMLInputElement = document.getElementById("model");
   const data = {
     "name": nameInput.value,
     "model": modelInput.value,
   };
-  const registered = checkRegistered(data.name, data.model);
-  postData(url, data)
-    .then(showCategoryBadges)
-    .catch((e: Error) => {
-      console.error(e);
-    });
+  checkRegistered(data);
 }
 
 /* 類似品番テーブルの表示 */
