@@ -101,8 +101,9 @@ class PidClassify:
         predict_dict = {}
         cumsum_percentile = 0
         # 確率の合計が閾値を超えるまでイテレート
-        while cumsum_percentile < threshold:
-            pid, prob = next(se_iter)
+        for pid, prob in se_iter:
+            if cumsum_percentile > threshold:
+                break
             cumsum_percentile += prob
             predict_dict[pid] = prob
         return predict_dict
