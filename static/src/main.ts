@@ -77,6 +77,7 @@ async function checkRegistered(data: Item) {
     .then((item: Map<string, Item>) => {
       // GET /search で品名型式検索
       console.log(item);
+      createTable(item, "タイトル");
       return item;
     })
     .catch(async () => {
@@ -124,25 +125,14 @@ function createHeader(
   table.appendChild(theadElem);
 }
 
-// ボタンクリックでカテゴリ検索をかけて類似品番を表示する
-async function getItem(pidClass: string) {
-  const url = root.origin + "/category/" + pidClass;
-  const json = await fetch(url)
-    .then((resp: Promise<Record<string, Item>>) => {
-      return resp.json();
-    })
-    .catch((resp: Promise<Record<string, Item>>) => {
-      return new Error(`error: ${resp.status}`);
-    });
-  const items: Map<string, Item> = new Map(Object.entries(json));
-  console.debug(items);
+function createTable(item: Item, caption: string) {
   if (exampleTable === null) return;
   exampleTable.innerHTML = ""; // Reset table
   // Write table header
   createHeader(
     exampleTable, // table element
     ["品番", "品名", "型式"], // header
-    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`,
+    caption,
   ); // caption
   const tbody = document.createElement("tbody");
   items.forEach((v: Item, k: string) => {
@@ -155,4 +145,20 @@ async function getItem(pidClass: string) {
     td.appendChild(document.createTextNode(v.model));
   });
   exampleTable.appendChild(tbody);
+}
+
+// ボタンクリックでカテゴリ検索をかけて類似品番を表示する
+async function getItem(pidClass: string) {
+  const url = root.origin + "/category/" + pidClass;
+  const json = await fetch(url)
+    .then((resp: Promise<Record<string, Item>>) => {
+      return resp.json();
+    })
+    .catch((resp: Promise<Record<string, Item>>) => {
+      return new Error(`error: ${resp.status}`);
+    });
+  const items: Map<string, Item> = new Map(Object.entries(json));
+  console.debug(items);
+  const caption = `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`;
+  createTable(items, caption);
 }
