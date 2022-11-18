@@ -1,0 +1,8 @@
+/.empty/
+/.git/
+/.mypy_cache/
+/__pycache__/
+/build/
+/data/
+/note/
+/Session.vim
