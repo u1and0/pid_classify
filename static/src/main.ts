@@ -2,6 +2,7 @@ type Item = {
   name: string;
   model: string;
 };
+type Items = Map<string, Item>;
 // 最上位のURL
 const root: URL = new URL(window.location.href);
 // index.htmlの要素
@@ -70,21 +71,31 @@ async function checkRegistered(data: Item) {
   if (data.model !== "") {
     url += `&model=${data.model}`;
   }
+  // GET /search で品名型式検索
   await fetch(url)
-    .then((resp: Response) => {
-      return resp.json();
+    .then((resp: Promise<Items>) => {
+      console.log(resp.status, resp.statusText);
+      if (resp.status === 200) { // 品名、型式の完全一致
+        return resp.json();
+      } else {
+        // 完全一致検索できなかった場合
+        // 204ステータスなので
+        // エラーを投げる。
+        // catch先で、POST /predictして予測を返す
+        throw new Error(`${resp.status}: ${resp.statusText}`);
+      }
     })
-    .then((item: Map<string, Item>) => {
-      // GET /search で品名型式検索
-      console.log(item);
-      createTable(item, "タイトル");
-      return item;
+    .then((items: Items) => {
+      console.log("search items: ", items);
+      // MapキャストしないとObjectとして渡されて、forEach使えない
+      items = new Map(Object.entries(items));
+      createTable(items, "タイトル");
     })
-    .catch(async () => {
-      // 品名、型式の登録がなければ
+    .catch((e: Error) => {
+      console.debug(e); // 品名、型式の完全一致が見つからなかった204エラー
       // POST /predict で品番予測
       const url = root.origin + "/predict";
-      await postData(url, data)
+      postData(url, data)
         .then(showCategoryBadges)
         .catch((e: Error) => {
           console.error(e);
@@ -100,6 +111,17 @@ async function postItem() {
     "name": nameInput.value,
     "model": modelInput.value,
   };
+  if (data.name === "") {
+    const msg = "品名を必ず入力してください。";
+    console.error(msg);
+    resultDiv.innerHTML = ""; // Reset result div
+    const errorMessage = document.createElement("div");
+    errorMessage.classList.add("alert", "alert-warning");
+    errorMessage.setAttribute("role", "alert");
+    errorMessage.innerHTML = msg;
+    resultDiv.appendChild(errorMessage);
+    return;
+  }
   checkRegistered(data);
 }
 
@@ -125,7 +147,7 @@ function createHeader(
   table.appendChild(theadElem);
 }
 
-function createTable(item: Item, caption: string) {
+function createTable(items: Map<string, Item>, caption: string) {
   if (exampleTable === null) return;
   exampleTable.innerHTML = ""; // Reset table
   // Write table header
@@ -135,14 +157,21 @@ function createTable(item: Item, caption: string) {
     caption,
   ); // caption
   const tbody = document.createElement("tbody");
+  console.log("search items: ", items);
+  // items = new Map(Object.entries(items));
+  // を差し込むと完全一致検索の方はテーブルが表示されるが、
+  // カテゴリ検索のテーブルは表示されない
   items.forEach((v: Item, k: string) => {
-    const tr = tbody.insertRow();
+    console.log(`key: ${k}, value: ${v}`);
+    const tr = tbody.insertRow(); // 行要素の作成
+    // セルを3列追加
     let td = tr.insertCell();
     td.appendChild(document.createTextNode(k));
     td = tr.insertCell();
     td.appendChild(document.createTextNode(v.name));
     td = tr.insertCell();
     td.appendChild(document.createTextNode(v.model));
+    tbody.appendChild(tr); // 行を追加
   });
   exampleTable.appendChild(tbody);
 }
@@ -151,13 +180,13 @@ function createTable(item: Item, caption: string) {
 async function getItem(pidClass: string) {
   const url = root.origin + "/category/" + pidClass;
   const json = await fetch(url)
-    .then((resp: Promise<Record<string, Item>>) => {
+    .then((resp: Promise<Items>) => {
       return resp.json();
     })
-    .catch((resp: Promise<Record<string, Item>>) => {
-      return new Error(`error: ${resp.status}`);
+    .catch((resp: Promise<Items>) => {
+      return new Error(`error: ${resp.status}: ${resp.statusText}`);
     });
-  const items: Map<string, Item> = new Map(Object.entries(json));
+  const items: Items = new Map(Object.entries(json));
   console.debug(items);
   const caption = `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`;
   createTable(items, caption);
