@@ -122,7 +122,7 @@ async def search(name: Optional[str] = None, model: Optional[str] = None):
     """品名、または型式、あるいはその両方から品番マスタを検索し
     JSONとしてレコードを返す。
     # マルチバイト文字はURLエンコードの必要あるので
-    # このコードはそのままではエラー
+    # このcurlリクエストはそのまま実行するとエラー
     $ curl localhost:8880/search?name=パッキン&model=174-452024-001
     {
         "GFB-9":{
