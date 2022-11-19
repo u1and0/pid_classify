@@ -1,8 +1,10 @@
+// JSONで返ってくる品名、型式のペア
 type Item = {
   name: string;
   model: string;
 };
-type Items = Map<string, Item>;
+type Pid = string;
+type Items = Map<Pid, Item>;
 // 最上位のURL
 const root: URL = new URL(window.location.href);
 // index.htmlの要素
@@ -75,12 +77,10 @@ async function checkRegistered(data: Item) {
   await fetch(url)
     .then((resp: Promise<Items>) => {
       console.log(resp.status, resp.statusText);
-      if (resp.status === 200) { // 品名、型式の完全一致
+      if (resp.status === 200) { // 品名、型式が完全一致した場合
         return resp.json();
-      } else {
-        // 完全一致検索できなかった場合
-        // 204ステータスなので
-        // エラーを投げる。
+      } else { // 完全一致検索できなかった場合
+        // 204ステータスなのでエラーを投げる。
         // catch先で、POST /predictして予測を返す
         throw new Error(`${resp.status}: ${resp.statusText}`);
       }
