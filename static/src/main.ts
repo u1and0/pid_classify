@@ -75,7 +75,7 @@ async function checkRegistered(data: Item) {
   }
   // GET /search で品名型式検索
   await fetch(url)
-    .then((resp: Promise<Items>) => {
+    .then((resp) => {
       console.log(resp.status, resp.statusText);
       if (resp.status === 200) { // 品名、型式が完全一致した場合
         return resp.json();
@@ -87,9 +87,18 @@ async function checkRegistered(data: Item) {
     })
     .then((items: Items) => {
       console.log("search items: ", items);
+      // ラベル表示
+      resultDiv.innerHTML = ""; // Reset result div
+      const msg = "品番登録済みです。";
+      const errorMessage = document.createElement("div");
+      errorMessage.classList.add("alert", "alert-info");
+      errorMessage.setAttribute("role", "alert");
+      errorMessage.innerHTML = msg;
+      resultDiv.appendChild(errorMessage);
+      // テーブル表示
       // MapキャストしないとObjectとして渡されて、forEach使えない
       items = new Map(Object.entries(items));
-      createTable(items, "タイトル");
+      createTable(items, `品名: ${data.name}, 型式: ${data.model} で登録されている品番`);
     })
     .catch((e: Error) => {
       console.debug(e); // 品名、型式の完全一致が見つからなかった204エラー
@@ -180,10 +189,10 @@ function createTable(items: Map<string, Item>, caption: string) {
 async function getItem(pidClass: string) {
   const url = root.origin + "/category/" + pidClass;
   const json = await fetch(url)
-    .then((resp: Promise<Items>) => {
+    .then((resp) => {
       return resp.json();
     })
-    .catch((resp: Promise<Items>) => {
+    .catch((resp) => {
       return new Error(`error: ${resp.status}: ${resp.statusText}`);
     });
   const items: Items = new Map(Object.entries(json));
