@@ -109,7 +109,11 @@ async function checkRegistered(data: Item) {
       // テーブル表示
       // MapキャストしないとObjectとして渡されて、forEach使えない
       items = new Map(Object.entries(items));
-      createTable(items, `品名: ${data.name}, 型式: ${data.model} で登録されている品番`);
+      createTable(
+        items,
+        `品名: ${data.name}, 型式: ${data.model} で\
+          登録されている品番をランダムに10件まで表示します。`,
+      );
     })
     .catch((e: Error) => {
       console.debug(e); // 品名、型式の完全一致が見つからなかった204エラー
@@ -203,6 +207,8 @@ async function getItem(pidClass: string) {
     });
   const items: Items = new Map(Object.entries(json));
   console.debug(items);
-  const caption = `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`;
-  createTable(items, caption);
+  createTable(
+    items,
+    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`,
+  );
 }

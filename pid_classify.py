@@ -35,7 +35,6 @@ dtype: float64
 """
 
 import os
-from collections import namedtuple
 from dataclasses import dataclass
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -43,14 +42,19 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 
-# PidMaster : 学習データ(品名、型式)、教師データ(品番カテゴリ)のデータコンテナ
-# PidMaster = namedtuple("PidMaster", ["names", "models", "categories"])
-
 
 def load_data(datapath: str) -> pd.DataFrame:
     """csvファイルを読み込んで品番マスタデータを返す"""
     cwd = os.path.dirname(__file__)
-    df = pd.read_csv(cwd + "/" + datapath, index_col=0, usecols=[0, 1, 2])
+    df = pd.read_csv(
+        cwd + "/" + datapath,
+        index_col=0,
+        usecols=[0, 1, 2],
+        skiprows=1,
+        skipfooter=1,
+        encoding="cp932",
+        engine="python",  # required by skipfooter option
+    )
     df["カテゴリ"] = [i.split("-")[0] for i in df.index]
     return df.loc[:, ["カテゴリ", "品名", "型式"]]
 

@@ -118,7 +118,7 @@ async def category(class_: str, limit: int = 10):
 
 
 @app.get("/search")
-async def search(name: Optional[str] = None, model: Optional[str] = None):
+async def search(name: str, model: Optional[str] = None, limit: int = 10):
     """品名、または型式、あるいはその両方から品番マスタを検索し
     JSONとしてレコードを返す。
     # マルチバイト文字はURLエンコードの必要あるので
@@ -142,7 +142,7 @@ async def search(name: Optional[str] = None, model: Optional[str] = None):
     if len(select) < 1:
         content = {"error": f"name={name} model={model} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
-    obj = to_object(select)
+    obj = to_object(select.sample(limit))
     print(f"transfer: {obj}")
     return obj
 
