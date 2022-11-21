@@ -35,7 +35,9 @@ dtype: float64
 """
 
 import os
-import time
+from datetime import datetime
+import hashlib
+from collections import namedtuple
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
@@ -43,26 +45,35 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 
 
-def load_data(datapath: str) -> pd.DataFrame:
+def load_data(filepath: str, encoding="cp932", **kwargs) -> pd.DataFrame:
     """csvファイルを読み込んで品番マスタデータを返す"""
-    cwd = os.path.dirname(__file__)
     df = pd.read_csv(
-        cwd + "/" + datapath,
+        filepath,
         index_col=0,
         usecols=[0, 1, 2],
         skiprows=1,
         skipfooter=1,
-        encoding="cp932",
+        encoding=encoding,
         engine="python",  # required by skipfooter option
+        **kwargs,
     )
-    df["カテゴリ"] = [i.split("-")[0] for i in df.index]
+    df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
     return df.loc[:, ["カテゴリ", "品名", "型式"]]
 
 
 def training(
     pid_master: pd.DataFrame
 ) -> tuple[MultinomialNB, HashingVectorizer, LabelEncoder, float]:
-    """品番データを学習して学習器を生成する"""
+    """品番データを学習して学習器を生成する
+    下記データフレームの品名と型式のタブ文字区切りを説明変数に
+    品番を目的変数に置き換えて学習する。
+
+    pd.DataFrame ==
+             品名     型式
+    品番
+    AAA-123  ケーブル type123
+    ...
+    """
     # テキストをtrigram特徴量に変換
     vectorizer = HashingVectorizer(
         n_features=2**16,
@@ -81,14 +92,14 @@ def training(
     # ナイーブベイズにより学習させます。
     clf = MultinomialNB()
     clf.fit(X_train, y_train)
-    # return PidClassify(clf, vectorizer, le, training_data
+    # return Classifier(clf, vectorizer, le, training_data
     score = clf.score(X_test, y_test)  # 学習の評価
     return clf, vectorizer, le, score
 
 
-class PidClassify:
+class Classifier:
     """品番カテゴリ分類器クラス"""
-    def __init__(self, filepath: str):
+    def __init__(self, data: pd.DataFrame):
         """
         learn from CSV filepath
         CSV file: CP932 encoding
@@ -106,11 +117,7 @@ class PidClassify:
             predict_proba: dict[str:float]
             predict_mask_proba: list[str]
         """
-        self.data: pd.DataFrame = load_data(filepath)
-        self.date = time.ctime(os.path.getmtime(filepath))\
-            .isoformat(" ", "seconds")
-        # .strftime("%Y-%m-%d %H:%M:%S")
-        self.clf, self.vectorizer, self.le, self.score = training(self.data)
+        self.clf, self.vectorizer, self.le, self.score = training(data)
         print(f"学習精度 {self.score:.4}で学習を完了しました。")
         assert 0.60 < self.score < 1, "適切な精度で学習できていません。"
 
@@ -169,6 +176,30 @@ class PidClassify:
         return list(dic.keys())
 
 
+class Master(pd.DataFrame):
+    """pd.DataFrameを基底クラスとした
+    データ、ファイルプロパティホルダー
+    Data and file property holder based on pd.DataFrame
+        self:pd.DataFrame = training data
+        date:str = file create time
+        hash:str = file content hash
+    """
+    def __init__(self, filepath: str, **kwargs):
+        """データをfilepathから読み込み、
+        ファイルのctimeとhashをプロパティへ設定する。
+        """
+        _data: pd.DataFrame = load_data(filepath, **kwargs)
+        super().__init__(_data)
+        _ctime: float = os.path.getctime(filepath)
+        self.date = datetime.fromtimestamp(_ctime)
+        with open(filepath, "rb") as f:
+            _b = f.read()
+        self.hash: str = hashlib.sha256(_b).hexdigest()
+
+
 # MAIN
 print("品番データを学習中...")
-classifier = PidClassify("./data/pidmaster.csv")
+cwd = os.path.dirname(__file__)  # pid_classify.py working directory
+filepath = cwd + "/data/pidmaster.csv"
+master = Master(filepath)  # 学習データとデータファイルプロパティ
+classifier = Classifier(master)  # 分類器

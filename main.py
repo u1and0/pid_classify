@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pid_classify import classifier
+from pid_classify import classifier, master
 
 
 class Item(BaseModel):
@@ -29,8 +29,6 @@ VERSION = "v0.2.2"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
-# 後方互換性のため、リネーム
-master = classifier.data  # import classifier.data as master
 
 
 def to_object(df: pd.DataFrame) -> dict[str, Item]:
@@ -54,7 +52,8 @@ async def index(request: Request):
             "request": request,
             "version": VERSION,
             "score": classifier.score,
-            "date": classifier.date,
+            "date": master.date,
+            "hash": master.hash
         })
 
 

@@ -13,8 +13,8 @@
     <div class="card-header">AI info</div>
     <div class="card-body">
       <p class="card-text">バージョン: {{ version }}</p>
-      <p class="card-text">スコア: {{ "{:.4f}".format(score) }}</p>
-      <p class="card-text">学習日: {{ date }}</p>
+      <p class="card-text">学習スコア: {{ "{:.4f}".format(score) }}</p>
+      <p class="card-text">学習日: {{ date.isoformat(" ", "seconds") }}</p>
     </div>
   </div>
   <div class="input-group mb-3">
