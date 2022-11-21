@@ -107,7 +107,8 @@ class PidClassify:
             predict_mask_proba: list[str]
         """
         self.data: pd.DataFrame = load_data(filepath)
-        self.date = time.ctime(os.path.getmtime(filepath))
+        self.date = time.ctime(os.path.getmtime(filepath))\
+            .isoformat(" ", "seconds")
         # .strftime("%Y-%m-%d %H:%M:%S")
         self.clf, self.vectorizer, self.le, self.score = training(self.data)
         print(f"学習精度 {self.score:.4}で学習を完了しました。")
