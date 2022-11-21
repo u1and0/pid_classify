@@ -1,3 +1,13 @@
+// Bootstrap alerts labels
+type Level =
+  | "alert-primary"
+  | "alert-secondary"
+  | "alert-success"
+  | "alert-danger"
+  | "alert-warning"
+  | "alert-info"
+  | "alert-light"
+  | "alert-dark";
 // JSONで返ってくる品名、型式のペア
 type Item = {
   name: string;
@@ -10,6 +20,16 @@ const root: URL = new URL(window.location.href);
 // index.htmlの要素
 const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
+
+// エントリポイントアクセス後の状態をメッセージで表示
+function resultAlertLabel(msg: string, level: Level) {
+  resultDiv.innerHTML = ""; // Reset result div
+  const label = document.createElement("div");
+  label.classList.add("alert", level);
+  label.setAttribute("role", "alert");
+  label.innerHTML = msg;
+  resultDiv.appendChild(label);
+}
 
 /* 予測品番の表示 */
 
@@ -46,11 +66,8 @@ function badgeSelector(i: number): string {
 // JSON responseを解決したら、品番カテゴリと予測確率をバッジとして表示する
 function showCategoryBadges(pidMap: Map<string, number>) {
   console.debug(pidMap);
-  if (resultDiv === null) return;
-  resultDiv.innerHTML = ""; // Reset result div
-  const h4 = document.createElement("h4");
-  h4.innerHTML = "AIが予測する品番カテゴリは次のいずれかです。";
-  resultDiv.appendChild(h4);
+  const msg = "AIが予測する品番カテゴリは次のいずれかです。";
+  resultAlertLabel(msg, "alert-success");
   Object.keys(pidMap).forEach((pid: string, i: number) => {
     const badge = document.createElement("button");
     if (badge === null) return;
@@ -88,13 +105,7 @@ async function checkRegistered(data: Item) {
     .then((items: Items) => {
       console.log("search items: ", items);
       // ラベル表示
-      resultDiv.innerHTML = ""; // Reset result div
-      const msg = "品番登録済みです。";
-      const errorMessage = document.createElement("div");
-      errorMessage.classList.add("alert", "alert-info");
-      errorMessage.setAttribute("role", "alert");
-      errorMessage.innerHTML = msg;
-      resultDiv.appendChild(errorMessage);
+      resultAlertLabel("品番登録済みです。", "alert-info");
       // テーブル表示
       // MapキャストしないとObjectとして渡されて、forEach使えない
       items = new Map(Object.entries(items));
@@ -123,12 +134,7 @@ async function postItem() {
   if (data.name === "") {
     const msg = "品名を必ず入力してください。";
     console.error(msg);
-    resultDiv.innerHTML = ""; // Reset result div
-    const errorMessage = document.createElement("div");
-    errorMessage.classList.add("alert", "alert-warning");
-    errorMessage.setAttribute("role", "alert");
-    errorMessage.innerHTML = msg;
-    resultDiv.appendChild(errorMessage);
+    resultAlertLabel(msg, "alert-warning");
     return;
   }
   checkRegistered(data);
