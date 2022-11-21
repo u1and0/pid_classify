@@ -35,7 +35,7 @@ dtype: float64
 """
 
 import os
-from dataclasses import dataclass
+import time
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
@@ -59,16 +59,59 @@ def load_data(datapath: str) -> pd.DataFrame:
     return df.loc[:, ["カテゴリ", "品名", "型式"]]
 
 
-@dataclass
+def training(
+    pid_master: pd.DataFrame
+) -> tuple[MultinomialNB, HashingVectorizer, LabelEncoder, float]:
+    """品番データを学習して学習器を生成する"""
+    # テキストをtrigram特徴量に変換
+    vectorizer = HashingVectorizer(
+        n_features=2**16,
+        analyzer="char",
+        ngram_range=(3, 3),  # trigram
+        binary=True,
+        norm=None)
+    # 品名 / 型式をタブ区切り
+    X = vectorizer.fit_transform(
+        f"{n}\t{m}" for n, m in zip(pid_master["品名"], pid_master["型式"]))
+    # カテゴリ文字列を数値に変換
+    le = LabelEncoder()
+    y = le.fit_transform(pid_master["カテゴリ"].values)
+    # データをトレーニング用、テスト用に分割します。
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+    # ナイーブベイズにより学習させます。
+    clf = MultinomialNB()
+    clf.fit(X_train, y_train)
+    # return PidClassify(clf, vectorizer, le, training_data
+    score = clf.score(X_test, y_test)  # 学習の評価
+    return clf, vectorizer, le, score
+
+
 class PidClassify:
     """品番カテゴリ分類器クラス"""
-    clf: MultinomialNB
-    vectorizer: HashingVectorizer
-    le: LabelEncoder
-    X_train: list
-    X_test: list
-    y_train: list
-    y_test: list
+    def __init__(self, filepath: str):
+        """
+        learn from CSV filepath
+        CSV file: CP932 encoding
+
+        Properties:
+            date: str
+            data : pd.DataFrame
+            clf: MultinomialNB
+            vectorizer: HashingVectorizer
+            le: LabelEncoder
+            score: float
+        Methods:
+            predct: str
+            _predict_proba_series: pd.Series
+            predict_proba: dict[str:float]
+            predict_mask_proba: list[str]
+        """
+        self.data: pd.DataFrame = load_data(filepath)
+        self.date = time.ctime(os.path.getmtime(filepath))
+        # .strftime("%Y-%m-%d %H:%M:%S")
+        self.clf, self.vectorizer, self.le, self.score = training(self.data)
+        print(f"学習精度 {self.score:.4}で学習を完了しました。")
+        assert 0.60 < self.score < 1, "適切な精度で学習できていません。"
 
     def predict(self, name, model: str) -> str:
         """ 品名と型式の組から、
@@ -124,39 +167,7 @@ class PidClassify:
         dic = self.predict_proba(name, model, top, threshold)
         return list(dic.keys())
 
-    def score(self):
-        """テストデータによるスコア算出"""
-        return self.clf.score(self.X_test, self.y_test)
 
-
-def training(pid_master: pd.DataFrame) -> PidClassify:
-    """品番データを学習して学習器を生成する"""
-    # テキストをtrigram特徴量に変換
-    vectorizer = HashingVectorizer(
-        n_features=2**16,
-        analyzer="char",
-        ngram_range=(3, 3),  # trigram
-        binary=True,
-        norm=None)
-    # 品名 / 型式をタブ区切り
-    X = vectorizer.fit_transform(
-        f"{n}\t{m}" for n, m in zip(pid_master["品名"], pid_master["型式"]))
-    # カテゴリ文字列を数値に変換
-    le = LabelEncoder()
-    y = le.fit_transform(pid_master["カテゴリ"].values)
-    # データをトレーニング用、テスト用に分割します。
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
-    # ナイーブベイズにより学習させます。
-    clf = MultinomialNB()
-    clf.fit(X_train, y_train)
-    return PidClassify(clf, vectorizer, le, X_train, X_test, y_train, y_test)
-
-
-### main ###
+# MAIN
 print("品番データを学習中...")
-master: pd.DataFrame = load_data("data/pidmaster.csv")
-classifier = training(master)
-# 学習の評価
-score = classifier.score()
-print(f"学習精度 {score:.4}で学習を完了しました。")
-assert 0.60 < score < 1, "適切な精度で学習できていません。"
+classifier = PidClassify("./data/pidmaster.csv")

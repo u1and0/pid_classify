@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pid_classify import classifier, master
+from pid_classify import classifier
 
 
 class Item(BaseModel):
@@ -25,9 +25,12 @@ class Item(BaseModel):
     model: Optional[str] = None
 
 
+VERSION = "v0.2.2"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+# 後方互換性のため、リネーム
+master = classifier.data  # import classifier.data as master
 
 
 def to_object(df: pd.DataFrame) -> dict[str, Item]:
@@ -46,9 +49,13 @@ async def root():
 @app.get("/index")
 async def index(request: Request):
     """メインページ"""
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-    })
+    return templates.TemplateResponse(
+        "index.html", {
+            "request": request,
+            "version": VERSION,
+            "score": classifier.score,
+            "date": classifier.date,
+        })
 
 
 @app.get("/hello")
@@ -108,10 +115,12 @@ async def category(class_: str, limit: int = 10):
     }
     """
     print(f"received: {class_}")
-    select = master[master["カテゴリ"] == class_].sample(limit)
+    select = master[master["カテゴリ"] == class_]
     if len(select) < 1:
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
+    if len(select) > limit:
+        select = select.sample(limit)
     obj = to_object(select)
     print(f"transfer: {obj}")
     return obj
@@ -142,7 +151,9 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
     if len(select) < 1:
         content = {"error": f"name={name} model={model} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
-    obj = to_object(select.sample(limit))
+    if len(select) > limit:
+        select = select.sample(limit)
+    obj = to_object(select)
     print(f"transfer: {obj}")
     return obj
 
