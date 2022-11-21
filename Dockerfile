@@ -26,6 +26,7 @@ COPY main.py /work
 COPY pid_classify.py /work
 COPY templates/index.html /work/templates/index.html
 COPY static/main.js /work/static/main.js
+COPY static/favicon.png /work/static/favicon.png
 RUN chmod -R +x /work/main.py
 
 USER classify_user
