@@ -99,7 +99,7 @@ async function checkRegistered(data: Item) {
   // GET /search で品名型式検索
   await fetch(url)
     .then((resp) => {
-      console.log(resp.status, resp.statusText);
+      console.debug(resp.status, resp.statusText);
       if (resp.status === 200) { // 品名、型式が完全一致した場合
         return resp.json();
       } else { // 完全一致検索できなかった場合
@@ -109,7 +109,7 @@ async function checkRegistered(data: Item) {
       }
     })
     .then((items: Items) => {
-      console.log("search items: ", items);
+      console.debug("search items: ", items);
       // ラベル表示
       resultAlertLabel("品番登録済みです。", "alert-info");
       // テーブル表示
@@ -182,12 +182,12 @@ function createTable(items: Map<string, Item>, caption: string) {
     caption,
   ); // caption
   const tbody = document.createElement("tbody");
-  console.log("search items: ", items);
+  console.debug("search items: ", items);
   // items = new Map(Object.entries(items));
   // を差し込むと完全一致検索の方はテーブルが表示されるが、
   // カテゴリ検索のテーブルは表示されない
   items.forEach((v: Item, k: string) => {
-    console.log(`key: ${k}, value: ${v}`);
+    console.debug(`key: ${k}, value: ${v}`);
     const tr = tbody.insertRow(); // 行要素の作成
     // セルを3列追加
     let td = tr.insertCell();

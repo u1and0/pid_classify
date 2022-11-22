@@ -12,19 +12,40 @@
     </button>
     品番予測AI
   </h1>
-  <div class="card text-white bg-primary mb-3" id="AI-info" style="display:none;clear:both;">
-    <div class="card-header">AI info</div>
+  <div class="card text-white bg-primary mb-3" id="AI-info" style="max-width: 44rem;display:none;clear:both;">
     <div class="card-body">
-      <p class="card-text">バージョン: {{ version }}</p>
-      <p class="card-text">学習スコア: {{ "{:.4f}".format(score) }}</p>
-      <p class="card-text">学習日: {{ date.isoformat(" ", "seconds") }}</p>
-      <p class="card-text">品番登録件数: {{ registered }}</p>
-      <p class="card-text">カテゴリ数: {{ categories }}</p>
+      <h5 class="card-title">AI info</h5>
+      <table>
+        <tr>
+          <td class="card-text text-white">バージョン</td>
+          <td class="card-text text-white">{{ version }}</td>
+        </tr>
+        <tr>
+          <td class="card-text text-white">学習スコア</td>
+          <td class="card-text text-white">{{ "{:.4f}".format(score) }}</td>
+        </tr>
+        <tr>
+          <td class="card-text text-white">学習日</td>
+          <td class="card-text text-white">{{ date.isoformat(" ", "seconds") }}</td>
+        </tr>
+        <tr>
+          <td class="card-text text-white">品番登録件数</td>
+          <td class="card-text text-white">{{ registered }}</td>
+        </tr>
+        <tr>
+          <td class="card-text text-white">カテゴリ数</td>
+          <td class="card-text text-white">{{ categories }}</td>
+        </tr>
+        <tr>
+          <td class="card-text text-white">データハッシュ</td>
+          <td class="card-text text-white">{{ hash }}</td>
+        </tr>
+      </table>
     </div>
   </div>
-  <div class="input-group mb-3">
-    <input type="text" id="name" placeholder="品名を入力してください">
-    <input type="text" id="model" placeholder="型式を入力してください">
+  <div class="input-group mb-3" style="max-width: 30rem;">
+    <input class="form-control" type="text" id="name" placeholder="品名を入力してください">
+    <input class="form-control" type="text" id="model" placeholder="型式を入力してください">
     <input type="button" name="submit" onclick="postItem()" value="品番予測">
   </div>
   <div id="result"></div>
