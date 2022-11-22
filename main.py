@@ -159,5 +159,21 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
     return obj
 
 
+@app.get("/name_list")
+async def name_list(name: str, limit: int = 100):
+    """品名のセットを返す"""
+    print(f"received: name={name}")
+    names = master["品名"]
+    select = names[names.str.contains(name)]
+    if len(select) < 1:
+        content = {"error": f"name={name} is not exist"}
+        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
+    if len(select) > limit:
+        select = select.sample(limit)
+    namelist = set(select)
+    print(f"transfer: {namelist}")
+    return namelist
+
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8880)

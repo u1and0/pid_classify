@@ -20,6 +20,9 @@ const root: URL = new URL(window.location.href);
 // index.htmlの要素
 const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
+const nameInput: HTMLInputElement = document.getElementById("name");
+const modelInput: HTMLInputElement = document.getElementById("model");
+const nameList: HTMLInputElement = document.getElementById("name-list");
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
@@ -133,23 +136,6 @@ async function checkRegistered(data: Item) {
     });
 }
 
-// 入力欄に打った情報をJSONでポスト
-async function postItem() {
-  const nameInput: HTMLInputElement = document.getElementById("name");
-  const modelInput: HTMLInputElement = document.getElementById("model");
-  const data = {
-    "name": nameInput.value,
-    "model": modelInput.value,
-  };
-  if (data.name === "") {
-    const msg = "品名を必ず入力してください。";
-    console.error(msg);
-    resultAlertLabel(msg, "alert-warning");
-    return;
-  }
-  checkRegistered(data);
-}
-
 /* 類似品番テーブルの表示 */
 
 // テーブルヘッダーの作成
@@ -172,6 +158,7 @@ function createHeader(
   table.appendChild(theadElem);
 }
 
+// APIで取得したJSON(Items型)でテーブル作成
 function createTable(items: Map<string, Item>, caption: string) {
   if (exampleTable === null) return;
   exampleTable.innerHTML = ""; // Reset table
@@ -180,14 +167,13 @@ function createTable(items: Map<string, Item>, caption: string) {
     exampleTable, // table element
     ["品番", "品名", "型式"], // header
     caption,
-  ); // caption
+  );
   const tbody = document.createElement("tbody");
-  console.debug("search items: ", items);
+  // console.debug("search items: ", items);
   // items = new Map(Object.entries(items));
   // を差し込むと完全一致検索の方はテーブルが表示されるが、
   // カテゴリ検索のテーブルは表示されない
   items.forEach((v: Item, k: string) => {
-    console.debug(`key: ${k}, value: ${v}`);
     const tr = tbody.insertRow(); // 行要素の作成
     // セルを3列追加
     let td = tr.insertCell();
@@ -199,6 +185,26 @@ function createTable(items: Map<string, Item>, caption: string) {
     tbody.appendChild(tr); // 行を追加
   });
   exampleTable.appendChild(tbody);
+}
+
+/* ここから下の関数は
+* onclick属性でhtml上の要素に定義するので
+* decleared but never read
+*/
+
+// 入力欄に打った情報をJSONでポスト
+async function postItem() {
+  const data = {
+    "name": nameInput.value,
+    "model": modelInput.value,
+  };
+  if (data.name === "") {
+    const msg = "品名を必ず入力してください。";
+    console.error(msg);
+    resultAlertLabel(msg, "alert-warning");
+    return;
+  }
+  checkRegistered(data);
 }
 
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
@@ -217,4 +223,32 @@ async function getItem(pidClass: string) {
     items,
     `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`,
   );
+}
+
+// 入力があるたびに品名一覧をinputの補完へ挿入
+function completionName(partsName: string) {
+  let timeoutID;
+  if (partsName === "") return;
+  clearTimeout(timeoutID); // 前回のタイマーストップ
+  timeoutID = setTimeout(() => {
+    const url = root.origin + "/name_list?name=" + partsName;
+    console.debug(url);
+    fetch(url)
+      .then((resp) => {
+        return resp.json();
+      })
+      .then((names: string[]) => {
+        nameList.innerHTML = ""; // reset name-list
+        console.debug(names);
+        // 品名一覧を補完候補へ挿入
+        names.forEach((n: string) => {
+          const optionElem = document.createElement("option");
+          optionElem.innerHTML = n;
+          nameList.appendChild(optionElem);
+        });
+      })
+      .catch((resp) => {
+        return new Error(`error: ${resp.status}: ${resp.statusText}`);
+      });
+  }, 1500); // 1.5秒入力がなければ、品名一覧をfetch
 }
