@@ -31,6 +31,12 @@ function resultAlertLabel(msg: string, level: Level) {
   resultDiv.appendChild(label);
 }
 
+// div の表示非表示切り替え
+function toggleMenu(elem: string) {
+  const obj = document.getElementById(elem).style;
+  obj.display = (obj.display == "none") ? "block" : "none";
+}
+
 /* 予測品番の表示 */
 
 async function postData(url: string, data: Item) {

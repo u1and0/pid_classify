@@ -6,15 +6,20 @@
 </head>
 <body>
   <h1>
-    <img src="/static/favicon.png" alt height="36" width="36">
+    <!--// AI情報折りたたみ展開ボタン -->
+    <button type="button" onclick="toggleMenu('AI-info')" title="AI info">
+      <img src="/static/favicon.png" alt height="36" width="36">
+    </button>
     品番予測AI
   </h1>
-  <div class="card text-white bg-primary mb-3" style="max-width: 18rem;">
+  <div class="card text-white bg-primary mb-3" id="AI-info" style="display:none;clear:both;">
     <div class="card-header">AI info</div>
     <div class="card-body">
       <p class="card-text">バージョン: {{ version }}</p>
       <p class="card-text">学習スコア: {{ "{:.4f}".format(score) }}</p>
       <p class="card-text">学習日: {{ date.isoformat(" ", "seconds") }}</p>
+      <p class="card-text">品番登録件数: {{ registered }}</p>
+      <p class="card-text">カテゴリ数: {{ categories }}</p>
     </div>
   </div>
   <div class="input-group mb-3">

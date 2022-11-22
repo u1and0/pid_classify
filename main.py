@@ -53,7 +53,9 @@ async def index(request: Request):
             "version": VERSION,
             "score": classifier.score,
             "date": master.date,
-            "hash": master.hash
+            "hash": master.hash,
+            "registered": len(master),
+            "categories": len(set(master["カテゴリ"])),
         })
 
 
