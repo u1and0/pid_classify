@@ -199,8 +199,10 @@ function createTable(items: Map<string, Item>, caption: string) {
 //   });
 // }
 
+// datalistタグをoptionで埋める
+// 引数にdatalistのエレメントとjsonで取得したfetchListが必要
 function completionList(element: HTMLElement, fetchedList: string[]) {
-  element.innerHTML = ""; // reset name-list
+  element.innerHTML = ""; // reset datalist
   console.debug(fetchedList);
   // 型式一覧を補完候補へ挿入
   fetchedList.forEach((n: string) => {
@@ -260,7 +262,20 @@ function fetchList(partsName: string) {
       .then((resp) => {
         return resp.json();
       })
-      .then((nameResult: string[]) => completionList(nameList, nameResult))
+      .then((nameResult: string[]) => {
+        completionList(nameList, nameResult);
+      })
+      .then(() => { // 品名リストの取得が成功したら品名に基づく型式も補完
+        url = root.origin + "/model_by_name_list?name=" + partsName;
+        console.debug(url);
+        fetch(url)
+          .then((resp) => {
+            return resp.json();
+          })
+          .then((modelResult: string[]) =>
+            completionList(modelList, modelResult)
+          );
+      })
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
       });
