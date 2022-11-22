@@ -44,7 +44,7 @@
     </div>
   </div>
   <div class="input-group mb-3" style="max-width: 30rem;">
-    <input class="form-control" type="text" id="name" placeholder="品名を入力してください" list="name-list" oninput="completionName(this.value)">
+    <input class="form-control" type="text" id="name" placeholder="品名を入力してください" list="name-list" oninput="fetchList(this.value)">
     <datalist id="name-list"></datalist>
     <input class="form-control" type="text" id="model" placeholder="型式を入力してください">
     <input type="button" name="submit" onclick="postItem()" value="品番予測">

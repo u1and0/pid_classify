@@ -4,7 +4,7 @@
 #
 # data以下にpidmaster.csvという名前の品番マスタ一覧のCSVファイルが必要です。
 
-# ビルドコンテナ
+# Python build container
 FROM python:3.11.0-slim-bullseye as builder
 WORKDIR /opt/app
 RUN apt-get update &&\
@@ -16,16 +16,23 @@ RUN apt-get update &&\
 COPY requirements.lock /opt/app
 RUN pip install --upgrade -r requirements.lock
 
+# TypeScript build container
+FROM node:18-alpine3.15 AS tsbuilder
+COPY ./static /tmp/static
+WORKDIR /tmp/static
+RUN npm install -D typescript ts-node ts-node-dev fzf
+RUN npx tsc || exit 0  # Ignore TypeScript build error
+
 # 実行コンテナ
 FROM python:3.11.0-slim-bullseye as runner
 WORKDIR /work
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=tsbuilder /tmp/static/main.js /work/static/main.js
 
 RUN useradd -r classify_user
 COPY main.py /work
 COPY pid_classify.py /work
 COPY templates/index.html /work/templates/index.html
-COPY static/main.js /work/static/main.js
 COPY static/favicon.png /work/static/favicon.png
 RUN chmod -R +x /work/main.py
 

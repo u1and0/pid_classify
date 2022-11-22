@@ -175,5 +175,21 @@ async def name_list(name: str, limit: int = 100):
     return namelist
 
 
+@app.get("/model_by_name_list")
+async def model_by_name_list(name: str, limit: int = 100):
+    """品名に対する型式のセットを返す"""
+    print(f"received: name={name}")
+    names = master["品名"]
+    select = master["型式"][names.str.contains(name)]
+    if len(select) < 1:
+        content = {"error": f"name={name} is not exist"}
+        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
+    if len(select) > limit:
+        select = select.sample(limit)
+    modellist = set(select)
+    print(f"transfer: {modellist}")
+    return modellist
+
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8880)

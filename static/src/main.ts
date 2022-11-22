@@ -22,7 +22,8 @@ const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
 const nameInput: HTMLInputElement = document.getElementById("name");
 const modelInput: HTMLInputElement = document.getElementById("model");
-const nameList: HTMLInputElement = document.getElementById("name-list");
+const nameList: HTMLElement = document.getElementById("name-list");
+const modelList: HTMLElement = document.getElementById("model-list");
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
@@ -187,6 +188,28 @@ function createTable(items: Map<string, Item>, caption: string) {
   exampleTable.appendChild(tbody);
 }
 
+// function completionNameList(names: string[]){
+//   nameList.innerHTML = ""; // reset name-list
+//   console.debug(names);
+//   // 品名一覧を補完候補へ挿入
+//   names.forEach((n: string) => {
+//     const optionElem = document.createElement("option");
+//     optionElem.innerHTML = n;
+//     nameList.appendChild(optionElem);
+//   });
+// }
+
+function completionList(element: HTMLElement, fetchedList: string[]) {
+  element.innerHTML = ""; // reset name-list
+  console.debug(fetchedList);
+  // 型式一覧を補完候補へ挿入
+  fetchedList.forEach((n: string) => {
+    const optionElem = document.createElement("option");
+    optionElem.innerHTML = n;
+    element.appendChild(optionElem);
+  });
+}
+
 /* ここから下の関数は
 * onclick属性でhtml上の要素に定義するので
 * decleared but never read
@@ -226,27 +249,18 @@ async function getItem(pidClass: string) {
 }
 
 // 入力があるたびに品名一覧をinputの補完へ挿入
-function completionName(partsName: string) {
+function fetchList(partsName: string) {
   let timeoutID;
   if (partsName === "") return;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
-    const url = root.origin + "/name_list?name=" + partsName;
+    let url = root.origin + "/name_list?name=" + partsName;
     console.debug(url);
     fetch(url)
       .then((resp) => {
         return resp.json();
       })
-      .then((names: string[]) => {
-        nameList.innerHTML = ""; // reset name-list
-        console.debug(names);
-        // 品名一覧を補完候補へ挿入
-        names.forEach((n: string) => {
-          const optionElem = document.createElement("option");
-          optionElem.innerHTML = n;
-          nameList.appendChild(optionElem);
-        });
-      })
+      .then((nameResult: string[]) => completionList(nameList, nameResult))
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
       });
