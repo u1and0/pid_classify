@@ -231,10 +231,18 @@ async function getItem(pidClass: string) {
       return new Error(`error: ${resp.status}: ${resp.statusText}`);
     });
   const items: Items = new Map(Object.entries(json));
+  const category = {
+    primary: "大分類A",
+    secondary: "中分類B",
+    tertiary: "小分類C",
+  };
   console.debug(items);
   createTable(
     items,
-    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。`,
+    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。分類規則は` +
+      `  (${pidClass[0]})${category.primary}` +
+      `> (${pidClass[1]})${category.secondary}` +
+      `> (${pidClass[2]})${category.tertiary}です。`,
   );
 }
 
