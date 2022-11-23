@@ -22,8 +22,8 @@ const resultDiv = document.getElementById("result");
 const exampleTable = document.getElementById("example-table");
 const nameInput: HTMLInputElement = document.getElementById("name");
 const modelInput: HTMLInputElement = document.getElementById("model");
-const nameList: HTMLElement = document.getElementById("name-list");
-const modelList: HTMLElement = document.getElementById("model-list");
+const nameDataList: HTMLElement = document.getElementById("name-list");
+const modelDataList: HTMLElement = document.getElementById("model-list");
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
@@ -188,24 +188,12 @@ function createTable(items: Map<string, Item>, caption: string) {
   exampleTable.appendChild(tbody);
 }
 
-// function completionNameList(names: string[]){
-//   nameList.innerHTML = ""; // reset name-list
-//   console.debug(names);
-//   // 品名一覧を補完候補へ挿入
-//   names.forEach((n: string) => {
-//     const optionElem = document.createElement("option");
-//     optionElem.innerHTML = n;
-//     nameList.appendChild(optionElem);
-//   });
-// }
-
 // datalistタグをoptionで埋める
-// 引数にdatalistのエレメントとjsonで取得したfetchListが必要
-function completionList(element: HTMLElement, fetchedList: string[]) {
-  element.innerHTML = ""; // reset datalist
-  console.debug(fetchedList);
+// 引数にdatalistのエレメントとjsonで取得したoptionTextsが必要
+function completionList(element: HTMLElement, optionTexts: string[]) {
+  console.debug(optionTexts);
   // 型式一覧を補完候補へ挿入
-  fetchedList.forEach((n: string) => {
+  optionTexts.forEach((n: string) => {
     const optionElem = document.createElement("option");
     optionElem.innerHTML = n;
     element.appendChild(optionElem);
@@ -220,8 +208,8 @@ function completionList(element: HTMLElement, fetchedList: string[]) {
 // 入力欄に打った情報をJSONでポスト
 async function postItem() {
   const data = {
-    "name": nameInput.value,
-    "model": modelInput.value,
+    "name": nameInput.value.trim(),
+    "model": modelInput.value.trim(),
   };
   if (data.name === "") {
     const msg = "品名を必ず入力してください。";
@@ -234,7 +222,7 @@ async function postItem() {
 
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
 async function getItem(pidClass: string) {
-  const url = root.origin + "/category/" + pidClass;
+  const url = root.origin + "/category/" + pidClass.trim();
   const json = await fetch(url)
     .then((resp) => {
       return resp.json();
@@ -252,8 +240,11 @@ async function getItem(pidClass: string) {
 
 // 入力があるたびに品名一覧をinputの補完へ挿入
 function fetchList(partsName: string) {
-  let timeoutID;
+  nameDataList.innerHTML = ""; // reset datalist
+  modelDataList.innerHTML = ""; // reset datalist
+  partsName = partsName.trim();
   if (partsName === "") return;
+  let timeoutID;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
     let url = root.origin + "/name_list?name=" + partsName;
@@ -263,7 +254,7 @@ function fetchList(partsName: string) {
         return resp.json();
       })
       .then((nameResult: string[]) => {
-        completionList(nameList, nameResult);
+        completionList(nameDataList, nameResult);
       })
       .then(() => { // 品名リストの取得が成功したら品名に基づく型式も補完
         url = root.origin + "/model_by_name_list?name=" + partsName;
@@ -273,7 +264,7 @@ function fetchList(partsName: string) {
             return resp.json();
           })
           .then((modelResult: string[]) =>
-            completionList(modelList, modelResult)
+            completionList(modelDataList, modelResult)
           );
       })
       .catch((resp) => {
