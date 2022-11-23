@@ -25,6 +25,24 @@ const modelInput: HTMLInputElement = document.getElementById("model");
 const nameDataList: HTMLElement = document.getElementById("name-list");
 const modelDataList: HTMLElement = document.getElementById("model-list");
 
+const category = {
+  primary: {
+    A: "パッキン",
+    B: "外注品",
+  },
+  secondary: {
+    A: "D型パッキン",
+    B: "B型パッキン",
+    Z: "Z型パッキン",
+  },
+  tertiary: {
+    A: "パッキン1",
+    B: "パッキン2",
+    C: "パッキン3",
+    Z: "パッキン4",
+  },
+};
+
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
   resultDiv.innerHTML = ""; // Reset result div
@@ -231,18 +249,13 @@ async function getItem(pidClass: string) {
       return new Error(`error: ${resp.status}: ${resp.statusText}`);
     });
   const items: Items = new Map(Object.entries(json));
-  const category = {
-    primary: "大分類A",
-    secondary: "中分類B",
-    tertiary: "小分類C",
-  };
   console.debug(items);
   createTable(
     items,
     `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。分類規則は` +
-      `  (${pidClass[0]})${category.primary}` +
-      `> (${pidClass[1]})${category.secondary}` +
-      `> (${pidClass[2]})${category.tertiary}です。`,
+      `  (${pidClass[0]})${category.primary[pidClass[0]]}` +
+      `> (${pidClass[1]})${category.secondary[pidClass[1]]}` +
+      `> (${pidClass[2]})${category.tertiary[pidClass[2]]}です。`,
   );
 }
 
