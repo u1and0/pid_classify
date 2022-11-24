@@ -37,7 +37,6 @@ dtype: float64
 import os
 from datetime import datetime
 import hashlib
-from collections import namedtuple
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder

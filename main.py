@@ -131,6 +131,8 @@ async def category(class_: str, limit: int = 10):
 async def search(name: str, model: Optional[str] = None, limit: int = 10):
     """品名、または型式、あるいはその両方から品番マスタを検索し
     JSONとしてレコードを返す。
+
+    ```
     # マルチバイト文字はURLエンコードの必要あるので
     # このcurlリクエストはそのまま実行するとエラー
     $ curl localhost:8880/search?name=パッキン&model=174-452024-001
@@ -140,6 +142,7 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
             "model":"174-452024-001"
             }
     }
+    ```
     """
     print(f"received: name={name} model={model}")
     dname = master["品名"] == name
@@ -159,9 +162,11 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
     return obj
 
 
-@app.get("/name_list")
+@app.get("/name_list/{name}")
 async def name_list(name: str, limit: int = 100):
-    """品名のセットを返す"""
+    """クエリ文字列が含まれる品名を*LIKE検索*して
+    重複無しで最大limit件まで返す
+    """
     print(f"received: name={name}")
     names = master["品名"]
     select = names[names.str.contains(name)]
@@ -175,9 +180,11 @@ async def name_list(name: str, limit: int = 100):
     return namelist
 
 
-@app.get("/model_by_name_list")
+@app.get("/model_by_name_list/{name}")
 async def model_by_name_list(name: str, limit: int = 100):
-    """品名に対する型式のセットを返す"""
+    """クエリ文字列が含まれる品名に関連する型式のセットを
+    最大limit件まで返す
+    """
     print(f"received: name={name}")
     names = master["品名"]
     select = master["型式"][names.str.contains(name)]
