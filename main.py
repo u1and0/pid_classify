@@ -162,14 +162,16 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
     return obj
 
 
-@app.get("/name_list/{name}")
-async def name_list(name: str, limit: int = 100):
+@app.get("/options/{name}")
+async def options(name: str, limit: int = 30, get_model: bool = False):
     """クエリ文字列が含まれる品名を*LIKE検索*して
-    重複無しで最大limit件まで返す
+    重複無しで最大limit件まで返す。
+    get_modelがTrueのとき、品名ではなく型式を返す。
     """
     print(f"received: name={name}")
     names = master["品名"]
-    select = names[names.str.contains(name)]
+    name_matches = names.str.contains(name)
+    select = master["型式"][name_matches] if get_model else names[name_matches]
     if len(select) < 1:
         content = {"error": f"name={name} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
@@ -178,24 +180,6 @@ async def name_list(name: str, limit: int = 100):
     namelist = set(select)
     print(f"transfer: {namelist}")
     return namelist
-
-
-@app.get("/model_by_name_list/{name}")
-async def model_by_name_list(name: str, limit: int = 100):
-    """クエリ文字列が含まれる品名に関連する型式のセットを
-    最大limit件まで返す
-    """
-    print(f"received: name={name}")
-    names = master["品名"]
-    select = master["型式"][names.str.contains(name)]
-    if len(select) < 1:
-        content = {"error": f"name={name} is not exist"}
-        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
-    if len(select) > limit:
-        select = select.sample(limit)
-    modellist = set(select)
-    print(f"transfer: {modellist}")
-    return modellist
 
 
 if __name__ == "__main__":

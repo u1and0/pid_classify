@@ -268,7 +268,7 @@ function fetchList(partsName: string) {
   let timeoutID;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
-    let url = root.origin + "/name_list?name=" + partsName;
+    let url = `${root.origin}/options/${partsName}`;
     console.debug(url);
     fetch(url)
       .then((resp) => {
@@ -278,7 +278,7 @@ function fetchList(partsName: string) {
         completionList(nameDataList, nameResult);
       })
       .then(() => { // 品名リストの取得が成功したら品名に基づく型式も補完
-        url = root.origin + "/model_by_name_list?name=" + partsName;
+        url = `${root.origin}/options/${partsName}?get_model=true`;
         console.debug(url);
         fetch(url)
           .then((resp) => {
