@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pid_classify import classifier, master
-from pid_category import CATEGORY
+from pid_category import categories
 
 
 class Item(BaseModel):
@@ -203,10 +203,17 @@ async def options(name: str, limit: int = 30, get_model: bool = False):
 
 @app.get("/description/{class_}")
 async def description(class_: str):
-    desc = CATEGORY.get(class_)
+    """カテゴリの説明を標準部品記号一覧から引く。
+
+    ```
+    $ curl localhost:8880/description/AAA
+    {"AAA": "(AA) 図番 > (A) 製品名記入"}
+    ```
+    """
+    desc = categories.get(class_)
     if desc is None:
         return JSONResponse(class_, status.HTTP_204_NO_CONTENT)
-    return {class_: desc}
+    return {class_: str(desc)}
 
 
 if __name__ == "__main__":
