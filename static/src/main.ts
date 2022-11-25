@@ -239,9 +239,13 @@ async function postItem() {
 }
 
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
+// pidClass は英字3文字
 async function getItem(pidClass: string) {
-  const url = root.origin + "/category/" + pidClass.trim();
-  const json = await fetch(url)
+  const url = {
+    category: root.origin + "/category/" + pidClass.trim(),
+    description: root.origin + "/description/" + pidClass.trim(),
+  };
+  const json = await fetch(url.category)
     .then((resp) => {
       return resp.json();
     })
@@ -250,12 +254,17 @@ async function getItem(pidClass: string) {
     });
   const items: Items = new Map(Object.entries(json));
   console.debug(items);
+  const categoryDescription = await fetch(url.description)
+    .then((resp) => {
+      return resp.json();
+    })
+    .catch((resp) => {
+      return new Error(`error: ${resp.status}: ${resp.statusText}`);
+    });
   createTable(
     items,
-    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。分類規則は` +
-      `  (${pidClass[0]})${category.primary[pidClass[0]]}` +
-      `> (${pidClass[1]})${category.secondary[pidClass[1]]}` +
-      `> (${pidClass[2]})${category.tertiary[pidClass[2]]}です。`,
+    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。` +
+      `分類規則は${categoryDescription[pidClass]}です。`,
   );
 }
 

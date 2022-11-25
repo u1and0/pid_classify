@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pid_classify import classifier, master
+from pid_category import CATEGORY
 
 
 class Item(BaseModel):
@@ -198,6 +199,14 @@ async def options(name: str, limit: int = 30, get_model: bool = False):
     namelist = set(select)
     print(f"transfer: {namelist}")
     return namelist
+
+
+@app.get("/description/{class_}")
+async def description(class_: str):
+    desc = CATEGORY.get(class_)
+    if desc is None:
+        return JSONResponse(class_, status.HTTP_204_NO_CONTENT)
+    return {class_: desc}
 
 
 if __name__ == "__main__":
