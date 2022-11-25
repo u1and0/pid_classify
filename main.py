@@ -18,14 +18,14 @@ from pid_classify import classifier, master
 
 
 class Item(BaseModel):
-    """フロントエンドで定義したItem型のJSONデータ形式
+    """品名(name)と型式(model)の組
     { "name":"パッキン", "model":"174-452024-001"}
     """
     name: Optional[str] = None
     model: Optional[str] = None
 
 
-VERSION = "v0.2.2"
+VERSION = "v0.2.2r"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -67,11 +67,14 @@ async def hello():
 
 @app.post("/predict")
 async def predict(item: Item):
-    """ classifierへJSONポストし、品番カテゴリ予測をJSONで受け取る
+    """ 品名と型式から予測される品番カテゴリをArray形式のJSONで受け取る
+
+    ```
     $ curl -H "Content-Type: application/json" \
         -d '{"name":"AAA", "model":"annonimous"}' \
         localhost:8880/predict
     ["AAA", "ZBA"]
+    ```
     """
     print(f"received: {item}")
     predict_dict = classifier.predict_proba(item.name, item.model)
@@ -82,6 +85,8 @@ async def predict(item: Item):
 @app.get("/pid/{parts_num}")
 async def pid(parts_num: str):
     """指定品番のレコードを返す
+
+    ```
     $ curl localhost:8880/pid/AAA-1001
     {
         AAA-1001: {
@@ -89,6 +94,7 @@ async def pid(parts_num: str):
             型式: "QB764"
         }
     }
+    ```
     """
     print(f"received: {parts_num}")
     try:
@@ -103,6 +109,8 @@ async def pid(parts_num: str):
 @app.get("/category/{class_}")
 async def category(class_: str, limit: int = 10):
     """指定カテゴリに属するレコードをランダムにlimit件返す
+
+    ```
     $ curl localhost:8880/category/AAA&limit=2
     {
         AAA-1: {
@@ -114,6 +122,7 @@ async def category(class_: str, limit: int = 10):
             model: "B153"
         }
     }
+    ```
     """
     print(f"received: {class_}")
     select = master[master["カテゴリ"] == class_]
@@ -165,8 +174,17 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
 @app.get("/options/{name}")
 async def options(name: str, limit: int = 30, get_model: bool = False):
     """クエリ文字列が含まれる品名を*LIKE検索*して
-    重複無しで最大limit件まで返す。
+    重複無しで最大limit件Array形式のJSONを返す。
     get_modelがTrueのとき、品名ではなく型式を返す。
+
+    ```
+    # マルチバイト文字はURLエンコードの必要あるので
+    # このcurlリクエストはそのまま実行するとエラー
+    $ curl "localhost:8880/options/パッキン?limit=3"
+    ["ガイシ用パッキン","艦船用帆布パッキン","ふた用パッキン"]
+    $ curl "localhost:8880/options/パッキン?limit=3&get_model=true"
+    ["SW56865","AS311-PKS","SD507639A"]
+    ```
     """
     print(f"received: name={name}")
     names = master["品名"]
