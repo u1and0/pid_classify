@@ -46,7 +46,7 @@ class Item(BaseModel):
         return master[dname & dmodel]
 
 
-VERSION = "v0.2.2r"
+VERSION = "v0.2.3"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
