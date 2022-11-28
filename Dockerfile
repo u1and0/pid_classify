@@ -32,6 +32,7 @@ COPY --from=tsbuilder /tmp/static/main.js /work/static/main.js
 RUN useradd -r classify_user
 COPY main.py /work
 COPY pid_classify.py /work
+COPY pid_category.py /work
 COPY templates/index.html /work/templates/index.html
 COPY static/favicon.png /work/static/favicon.png
 RUN chmod -R +x /work/main.py
