@@ -193,7 +193,7 @@ async def search(name: Optional[str] = None,
     ```
     # マルチバイト文字はURLエンコードの必要あるので
     # このcurlリクエストはそのまま実行するとエラー
-    $ curl localhost:8880/search?name=パッキン&model=174-452024-001
+    $ curl localhost:8880/search?name=パッキン&model=174-45&limit=2
     {
         "GFB-240": {
             "name": "パッキン",
