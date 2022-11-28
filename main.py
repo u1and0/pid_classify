@@ -10,10 +10,10 @@ from typing import Optional
 import pandas as pd
 import uvicorn
 from fastapi import FastAPI, Request, status
-from pydantic import BaseModel
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from pid_classify import classifier, master
 from pid_category import categories
 
@@ -24,6 +24,26 @@ class Item(BaseModel):
     """
     name: Optional[str] = None
     model: Optional[str] = None
+
+    def like_search(self) -> pd.DataFrame:
+        """グローバルオブジェクトのmaster(品番マスタ)から
+        nameとmodelを含むあいまい検索"""
+        dname = master["品名"].str.contains(
+            self.name if self.name is not None else "")
+        dmodel = master["型式"].str.contains(
+            self.model if self.model is not None else "")
+        return master[dname & dmodel]
+
+    def strict_search(self) -> pd.DataFrame:
+        """グローバルオブジェクトのmaster(品番マスタ)から
+        nameとmodelを含む完全一致検索"""
+        dname = master["品名"] == self.name
+        if self.name is None:  # None なら全てTrueのSeries
+            dname = ~dname
+        dmodel = master["型式"] == self.model
+        if self.model is None:  # None なら全てTrueのSeries
+            dmodel = ~dmodel
+        return master[dname & dmodel]
 
 
 VERSION = "v0.2.2r"
@@ -78,6 +98,10 @@ async def predict(item: Item):
     ```
     """
     print(f"received: {item}")
+    if item.name is None:
+        item.name = ""
+    if item.model is None:
+        item.model = ""
     predict_dict = classifier.predict_proba(item.name, item.model)
     print(f"transfer: {predict_dict}")
     return predict_dict
@@ -138,7 +162,13 @@ async def category(class_: str, limit: int = 10):
 
 
 @app.get("/search")
-async def search(name: str, model: Optional[str] = None, limit: int = 10):
+async def search(name: Optional[str] = None,
+                 model: Optional[str] = None,
+                 limit: int = 10,
+                 strict: bool = False):
+    # async def search(item: Item, limit: int = 10, strict: bool = False):
+    #                  ^^^^^^^^^^
+    # この書き方はGETメソッドにリクエストボディを要求してしまうので不可
     """品名、または型式、あるいはその両方から品番マスタを検索し
     JSONとしてレコードを返す。
 
@@ -154,51 +184,23 @@ async def search(name: str, model: Optional[str] = None, limit: int = 10):
     }
     ```
     """
-    print(f"received: name={name} model={model}")
-    dname = master["品名"] == name
-    if name is None:  # None なら全てTrueのSeries
-        dname = ~dname
-    dmodel = master["型式"] == model
-    if model is None:  # None なら全てTrueのSeries
-        dmodel = ~dmodel
-    select = master[dname & dmodel]
-    if len(select) < 1:
-        content = {"error": f"name={name} model={model} is not exist"}
+    item = Item(name=name, model=model)
+    print(f"received: name={item.name} model={item.model}")
+    if (item.name is None) and (item.model is None):
+        content = {"error": "required name or model"}
+        return JSONResponse(content, status.HTTP_400_BAD_REQUEST)
+    # &strict=true で完全一致検索、指定なしまたはfalse であいまい検索
+    select = item.strict_search() if strict else item.like_search()
+    if len(select) < 1:  # 結果がなければ204 NO CONTENTエラー
+        content = {
+            "error": f"name={item.name} model={item.model} is not exist"
+        }
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
-    if len(select) > limit:
+    if len(select) > limit:  # 結果が多すぎればlimitの数だけランダムサンプリング
         select = select.sample(limit)
     obj = to_object(select)
     print(f"transfer: {obj}")
     return obj
-
-
-@app.get("/options/{name}")
-async def options(name: str, limit: int = 30, get_model: bool = False):
-    """クエリ文字列が含まれる品名を*LIKE検索*して
-    重複無しで最大limit件Array形式のJSONを返す。
-    get_modelがTrueのとき、品名ではなく型式を返す。
-
-    ```
-    # マルチバイト文字はURLエンコードの必要あるので
-    # このcurlリクエストはそのまま実行するとエラー
-    $ curl "localhost:8880/options/パッキン?limit=3"
-    ["ガイシ用パッキン","艦船用帆布パッキン","ふた用パッキン"]
-    $ curl "localhost:8880/options/パッキン?limit=3&get_model=true"
-    ["SW56865","AS311-PKS","SD507639A"]
-    ```
-    """
-    print(f"received: name={name}")
-    names = master["品名"]
-    name_matches = names.str.contains(name)
-    select = master["型式"][name_matches] if get_model else names[name_matches]
-    if len(select) < 1:
-        content = {"error": f"name={name} is not exist"}
-        return JSONResponse(content, status.HTTP_204_NO_CONTENT)
-    if len(select) > limit:
-        select = select.sample(limit)
-    namelist = set(select)
-    print(f"transfer: {namelist}")
-    return namelist
 
 
 @app.get("/description/{class_}")
