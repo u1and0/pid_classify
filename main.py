@@ -195,10 +195,14 @@ async def search(name: Optional[str] = None,
     # このcurlリクエストはそのまま実行するとエラー
     $ curl localhost:8880/search?name=パッキン&model=174-452024-001
     {
-        "GFB-9":{
-            "name":"パッキン",
-            "model":"174-452024-001"
-            }
+        "GFB-240": {
+            "name": "パッキン",
+            "model": "174-451736-002"
+        },
+          "GFB-169": {
+            "name": "パッキン",
+            "model": "174-451276-001"
+        }
     }
     ```
     """

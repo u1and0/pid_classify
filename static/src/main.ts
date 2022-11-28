@@ -110,10 +110,14 @@ function showCategoryBadges(pidMap: Map<string, number>) {
   });
 }
 
+// 過去に品番登録したことがある品名、型式を完全一致検索して
+// 10行まで表示する
+// 品名型式が完全一致するレコードが1行もなかった場合、
+// 品番予測AIによる予測カテゴリを表示する
 async function checkRegistered(data: Item) {
-  let url = root.origin + "/search?";
+  let url = root.origin + "/search?strict=true";
   if (data.name !== "") {
-    url += `name=${data.name}`;
+    url += `&name=${data.name}`;
   }
   if (data.model !== "") {
     url += `&model=${data.model}`;
@@ -208,7 +212,8 @@ function createTable(items: Map<string, Item>, caption: string) {
 
 // datalistタグをoptionで埋める
 // 引数にdatalistのエレメントとjsonで取得したoptionTextsが必要
-function completionList(element: HTMLElement, optionTexts: string[]) {
+function completionList(element: HTMLElement, optionTexts: Set<string>) {
+  element.innerHTML = ""; // reset datalist
   console.debug(optionTexts);
   // 型式一覧を補完候補へ挿入
   optionTexts.forEach((n: string) => {
@@ -216,6 +221,12 @@ function completionList(element: HTMLElement, optionTexts: string[]) {
     optionElem.innerHTML = n;
     element.appendChild(optionElem);
   });
+}
+
+function inputVaridate() {
+  const msg = "品名を必ず入力してください。";
+  console.error(msg);
+  resultAlertLabel(msg, "alert-warning");
 }
 
 /* ここから下の関数は
@@ -230,9 +241,7 @@ async function postItem() {
     "model": modelInput.value.trim(),
   };
   if (data.name === "") {
-    const msg = "品名を必ず入力してください。";
-    console.error(msg);
-    resultAlertLabel(msg, "alert-warning");
+    inputVaridate();
     return;
   }
   checkRegistered(data);
@@ -277,25 +286,24 @@ function fetchList(partsName: string) {
   let timeoutID;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
-    let url = `${root.origin}/options/${partsName}`;
+    let url = `${root.origin}/search?limit=30&name=${partsName}`;
     console.debug(url);
     fetch(url)
       .then((resp) => {
         return resp.json();
       })
-      .then((nameResult: string[]) => {
-        completionList(nameDataList, nameResult);
-      })
-      .then(() => { // 品名リストの取得が成功したら品名に基づく型式も補完
-        url = `${root.origin}/options/${partsName}?get_model=true`;
-        console.debug(url);
-        fetch(url)
-          .then((resp) => {
-            return resp.json();
-          })
-          .then((modelResult: string[]) =>
-            completionList(modelDataList, modelResult)
-          );
+      .then((json) => {
+        // /searchの結果を重複無しで品名datalistと型式datalistへ加える
+        const items: Items = new Map(Object.entries(json)); // Itemsへキャスト
+        console.debug(items);
+        const nameSet: Set<string> = new Set();
+        const modelSet: Set<string> = new Set();
+        items.forEach((item: Item) => {
+          nameSet.add(item.name);
+          modelSet.add(item.model);
+        });
+        completionList(nameDataList, nameSet);
+        completionList(modelDataList, modelSet);
       })
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
