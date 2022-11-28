@@ -1,4 +1,3 @@
-# <span class="badge badge-primary">v0.2.0</span>
 品名と型式から品番頭文字3桁をAIが予測してくれます。
 
 # トップ画面
