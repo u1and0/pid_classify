@@ -25,24 +25,6 @@ const modelInput: HTMLInputElement = document.getElementById("model");
 const nameDataList: HTMLElement = document.getElementById("name-list");
 const modelDataList: HTMLElement = document.getElementById("model-list");
 
-const category = {
-  primary: {
-    A: "パッキン",
-    B: "外注品",
-  },
-  secondary: {
-    A: "D型パッキン",
-    B: "B型パッキン",
-    Z: "Z型パッキン",
-  },
-  tertiary: {
-    A: "パッキン1",
-    B: "パッキン2",
-    C: "パッキン3",
-    Z: "パッキン4",
-  },
-};
-
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
   resultDiv.innerHTML = ""; // Reset result div
@@ -61,6 +43,7 @@ function toggleMenu(elem: string) {
 
 /* 予測品番の表示 */
 
+// POST method helper
 async function postData(url: string, data: Item) {
   const resp = await fetch(url, {
     method: "POST",
