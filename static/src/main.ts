@@ -24,6 +24,10 @@ const nameInput: HTMLInputElement = document.getElementById("name");
 const modelInput: HTMLInputElement = document.getElementById("model");
 const nameDataList: HTMLElement = document.getElementById("name-list");
 const modelDataList: HTMLElement = document.getElementById("model-list");
+// fetchList()を実行したときのtimeoutID
+// setTimeout()に指定されたミリ秒数内に入力をすると
+// clearTimeout()によりキャンセルされる
+let timeoutID: number;
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
@@ -76,7 +80,7 @@ function showCategoryBadges(pidMap: Map<string, number>) {
   Object.keys(pidMap).forEach((pid: string, i: number) => {
     const badge = document.createElement("button");
     if (badge === null) return;
-    const proba = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
+    const proba: number = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
     badge.setAttribute("type", "button");
     badge.setAttribute("title", `予測確率${proba}%`);
     badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
@@ -248,10 +252,9 @@ function fetchList(partsName: string) {
   modelDataList.innerHTML = ""; // reset datalist
   partsName = partsName.trim();
   if (partsName === "") return;
-  let timeoutID;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
-    let url = `${root.origin}/search?limit=30&name=${partsName}`;
+    const url = `${root.origin}/search?limit=30&name=${partsName}`;
     console.debug(url);
     fetch(url)
       .then((resp) => {
@@ -273,5 +276,5 @@ function fetchList(partsName: string) {
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
       });
-  }, 1500); // 1.5秒入力がなければ、品名一覧をfetch
+  }, 400); // 1.5秒入力がなければ、品名一覧をfetch
 }
