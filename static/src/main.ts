@@ -223,12 +223,6 @@ function completionList(element: HTMLElement, optionTexts: Set<string>) {
   });
 }
 
-function inputVaridate() {
-  const msg = "品名を必ず入力してください。";
-  console.error(msg);
-  resultAlertLabel(msg, "alert-warning");
-}
-
 /* ここから下の関数は
 * onclick属性でhtml上の要素に定義するので
 * decleared but never read
@@ -241,7 +235,9 @@ async function postItem() {
     "model": modelInput.value.trim(),
   };
   if (data.name === "") {
-    inputVaridate();
+    const msg = "品名を必ず入力してください。";
+    console.error(msg);
+    resultAlertLabel(msg, "alert-warning");
     return;
   }
   checkRegistered(data);
@@ -250,31 +246,23 @@ async function postItem() {
 // ボタンクリックでカテゴリ検索をかけて類似品番を表示する
 // pidClass は英字3文字
 async function getItem(pidClass: string) {
-  const url = {
-    category: root.origin + "/category/" + pidClass.trim(),
-    description: root.origin + "/description/" + pidClass.trim(),
-  };
-  const json = await fetch(url.category)
+  const url = root.origin + "/category/" + pidClass.trim();
+  await fetch(url)
     .then((resp) => {
       return resp.json();
+    })
+    .then((json) => {
+      console.debug(json);
+      const items: Items = new Map(Object.entries(json.items));
+      createTable(
+        items,
+        `${pidClass}カテゴリの分類規則は[ ${json.text} ]です。` +
+          `同一カテゴリの品名、型式をランダムに10件まで表示します。`,
+      );
     })
     .catch((resp) => {
       return new Error(`error: ${resp.status}: ${resp.statusText}`);
     });
-  const items: Items = new Map(Object.entries(json));
-  console.debug(items);
-  const categoryDescription = await fetch(url.description)
-    .then((resp) => {
-      return resp.json();
-    })
-    .catch((resp) => {
-      return new Error(`error: ${resp.status}: ${resp.statusText}`);
-    });
-  createTable(
-    items,
-    `${pidClass}カテゴリに属する品名、型式をランダムに10件まで表示します。` +
-      `分類規則は${categoryDescription[pidClass]}です。`,
-  );
 }
 
 // 入力があるたびに品名一覧をinputの補完へ挿入

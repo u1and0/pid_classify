@@ -139,7 +139,7 @@ async def category(class_: str, limit: int = 10):
     ```
     $ curl localhost:8880/category/AAA&limit=2
     {
-        description: "(AAA) 図番 > 製品名記入",
+        text: "(AAA) 図番 > 製品名記入",
         items:{
             AAA-1: {
                 name: "シリンダ",
@@ -165,7 +165,7 @@ async def category(class_: str, limit: int = 10):
     if len(select) > limit:
         select = select.sample(limit)
     items = to_object(select)
-    obj = {"items": items, "description": str(desc)}
+    obj = {"items": items, "text": str(desc)}
     print(f"transfer: {obj}")
     return obj
 

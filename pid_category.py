@@ -35,12 +35,12 @@ class Category:
     def __str__(self):
         """
         >>> print(categories["AAA"])
-        (AAA) 図番 >  製品名記入
+        図番 >  製品名記入
         >>> str(categories["AAA"])
-        (AAA) 図番 >  製品名記入
+        図番 >  製品名記入
         """
-        x, y, z = self.class_symbol, self.type_symbol, self.name_symbol
-        return f"({x}{y}{z}) {self.type_string} > {self.name_string}"
+        # x, y, z = self.class_symbol, self.type_symbol, self.name_symbol
+        return f"{self.type_string} > {self.name_string}"
 
 
 class Categories(UserDict):
