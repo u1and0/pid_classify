@@ -134,29 +134,38 @@ async def pid(parts_num: str):
 @app.get("/category/{class_}")
 async def category(class_: str, limit: int = 10):
     """指定カテゴリに属するレコードをランダムにlimit件返す
+    カテゴリの説明を標準部品記号一覧から引く。
 
     ```
     $ curl localhost:8880/category/AAA&limit=2
     {
-        AAA-1: {
-            name: "シリンダ",
-            model: "A745"
-        },
-        AAA-2: {
-            name: "シリンダ",
-            model: "B153"
+        description: "(AAA) 図番 > 製品名記入",
+        items:{
+            AAA-1: {
+                name: "シリンダ",
+                model: "A745"
+            },
+            AAA-2: {
+                name: "シリンダ",
+                model: "B153"
+            }
         }
     }
     ```
     """
     print(f"received: {class_}")
+    desc: Optional[str] = categories.get(class_)
     select = master[master["カテゴリ"] == class_]
-    if len(select) < 1:
+    # これまでに登録されたことはあるが、標準部品記号一覧にはない場合
+    # かつ
+    # 標準部品記号一覧にあるが、これまでに登録されたことはない場合
+    if (desc is None) and (len(select) < 1):
         content = {"error": f"{class_} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
     if len(select) > limit:
         select = select.sample(limit)
-    obj = to_object(select)
+    items = to_object(select)
+    obj = {"items": items, "description": str(desc)}
     print(f"transfer: {obj}")
     return obj
 
@@ -204,30 +213,13 @@ async def search(name: Optional[str] = None,
     # &strict=true で完全一致検索、指定なしまたはfalse であいまい検索
     select = item.strict_search() if strict else item.like_search()
     if len(select) < 1:  # 結果がなければ204 NO CONTENTエラー
-        content = {
-            "error": f"name={item.name} model={item.model} is not exist"
-        }
+        content = {"error": f"name={name} model={model} is not exist"}
         return JSONResponse(content, status.HTTP_204_NO_CONTENT)
     if len(select) > limit:  # 結果が多すぎればlimitの数だけランダムサンプリング
         select = select.sample(limit)
     obj = to_object(select)
     print(f"transfer: {obj}")
     return obj
-
-
-@app.get("/description/{class_}")
-async def description(class_: str):
-    """カテゴリの説明を標準部品記号一覧から引く。
-
-    ```
-    $ curl localhost:8880/description/AAA
-    {"AAA": "(AA) 図番 > (A) 製品名記入"}
-    ```
-    """
-    desc = categories.get(class_)
-    if desc is None:
-        return JSONResponse(class_, status.HTTP_204_NO_CONTENT)
-    return {class_: str(desc)}
 
 
 if __name__ == "__main__":
