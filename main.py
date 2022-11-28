@@ -88,7 +88,7 @@ async def hello():
 
 @app.post("/predict")
 async def predict(item: Item):
-    """ 品名と型式から予測される品番カテゴリをArray形式のJSONで受け取る
+    """ 品名と型式から予測される品番カテゴリと予測確率を返す。
 
     ```
     $ curl -H "Content-Type: application/json" \
