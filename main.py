@@ -169,8 +169,17 @@ async def search(name: Optional[str] = None,
     # async def search(item: Item, limit: int = 10, strict: bool = False):
     #                  ^^^^^^^^^^
     # この書き方はGETメソッドにリクエストボディを要求してしまうので不可
-    """品名、または型式、あるいはその両方から品番マスタを検索し
-    JSONとしてレコードを返す。
+    """
+    クエリオプションstrictがfalsyのとき(デフォルト)
+    品名、または型式、あるいはその両方から品番マスタを検索し
+    クエリ文字列が含まれるレコードを返す。
+
+    クエリオプションstrictがtruthyのとき
+    品名、または型式、あるいはその両方から品番マスタを検索し
+    完全一致するレコードを返す。
+
+    品名と型式が両方指定された場合は、
+    品名と型式の両方がマッチするものを返す。(AND検索)
 
     ```
     # マルチバイト文字はURLエンコードの必要あるので
@@ -184,11 +193,14 @@ async def search(name: Optional[str] = None,
     }
     ```
     """
-    item = Item(name=name, model=model)
-    print(f"received: name={item.name} model={item.model}")
-    if (item.name is None) and (item.model is None):
+    print(f"received: name={name} model={model}")
+    # ItemはNoneを受け付けるが、
+    # 両方Noneのときは全てのレコードが対象になるので、
+    # エラーを返しておく
+    if (name is None) and (model is None):
         content = {"error": "required name or model"}
         return JSONResponse(content, status.HTTP_400_BAD_REQUEST)
+    item = Item(name=name, model=model)
     # &strict=true で完全一致検索、指定なしまたはfalse であいまい検索
     select = item.strict_search() if strict else item.like_search()
     if len(select) < 1:  # 結果がなければ204 NO CONTENTエラー
