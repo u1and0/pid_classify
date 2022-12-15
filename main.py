@@ -91,10 +91,8 @@ async def predict(item: Item):
     """ 品名と型式から予測される品番カテゴリと予測確率を返す。
 
     ```
-    $ curl -H "Content-Type: application/json" \
-        -d '{"name":"AAA", "model":"annonimous"}' \
-        localhost:8880/predict
-    ["AAA", "ZBA"]
+    $ curl -H "Content-Type: application/json" -d '{"name":"AAA", "model":"annonimous"}' localhost:8880/predict
+    {"GAA":0.9482887938884507,"GJA":0.011494742934441223}
     ```
     """
     print(f"received: {item}")
@@ -112,12 +110,11 @@ async def pid(parts_num: str):
     """指定品番のレコードを返す
 
     ```
-    $ curl localhost:8880/pid/AAA-1001
+    $ curl localhost:8880/pid/AAA-101
     {
-        AAA-1001: {
-            品名: "シリンダ",
-            型式: "QB764"
-        }
+        "カテゴリ": "AAA",
+        "品名": "レドーム",
+        "型式":"SW218542A"
     }
     ```
     """
@@ -137,19 +134,19 @@ async def category(class_: str, limit: int = 10):
     カテゴリの説明を標準部品記号一覧から引く。
 
     ```
-    $ curl localhost:8880/category/AAA&limit=2
+    $ curl 'localhost:8880/category/AAA?limit=2'
     {
-        text: "(AAA) 図番 > 製品名記入",
-        items:{
-            AAA-1: {
-                name: "シリンダ",
-                model: "A745"
-            },
-            AAA-2: {
-                name: "シリンダ",
-                model: "B153"
-            }
+      "items": {
+        "AAA-1152": {
+          "name": "ロープ長さ調整プレートP4 (225)",
+          "model": "SZ301173-P4"
+        },
+        "AAA-9": {
+          "name": "カバー",
+          "model": "SE209548 改訂1"
         }
+      },
+      "text": "図番 > 製品名記入"
     }
     ```
     """
@@ -193,7 +190,7 @@ async def search(name: Optional[str] = None,
     ```
     # マルチバイト文字はURLエンコードの必要あるので
     # このcurlリクエストはそのまま実行するとエラー
-    $ curl localhost:8880/search?name=パッキン&model=174-45&limit=2
+    $ curl 'localhost:8880/search?model=174-45&limit=2&strict=false'
     {
         "GFB-240": {
             "name": "パッキン",
