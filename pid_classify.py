@@ -42,9 +42,29 @@ from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
+from chardet.universaldetector import UniversalDetector
 
 
-def load_data(filepath: str, encoding="cp932", **kwargs) -> pd.DataFrame:
+def eval_encoding(filepath: str) -> str:
+    """エンコーディング判定
+
+    usage:
+        enc = eval_encoding()
+
+    enc["encoding"] のなかに"CP932", "SHIFT_JIS"などの
+    エンコード文字列が入っている
+    """
+    with open(filepath, 'rb') as f:
+        detector = UniversalDetector()
+        for line in f:
+            detector.feed(line)
+            if detector.done:
+                break
+        detector.close()
+        return detector.result
+
+
+def load_data(filepath: str, **kwargs) -> pd.DataFrame:
     """csvファイルを読み込んで品番マスタデータを返す"""
     df = pd.read_csv(
         filepath,
@@ -52,7 +72,6 @@ def load_data(filepath: str, encoding="cp932", **kwargs) -> pd.DataFrame:
         usecols=[0, 1, 2],
         skiprows=1,
         skipfooter=1,
-        encoding=encoding,
         engine="python",  # required by skipfooter option
         **kwargs,
     )
@@ -187,7 +206,14 @@ class Master(pd.DataFrame):
         """データをfilepathから読み込み、
         ファイルのctimeとhashをプロパティへ設定する。
         """
-        _data: pd.DataFrame = load_data(filepath, **kwargs)
+        _encoding = eval_encoding(filepath)["encoding"]
+        # utf-8ならKaruwazaWebClientConsoleからの出力なので、タブセパレートになっている
+        # cp932やshift_jisならブラウザからの出力なので、コンマセパレートになっている
+        _sep = "\t" if _encoding == "utf-8" else ","
+        _data: pd.DataFrame = load_data(filepath,
+                                        encoding=_encoding,
+                                        sep=_sep,
+                                        **kwargs)
         super().__init__(_data)
         _ctime: float = os.path.getctime(filepath)
         self.date = datetime.fromtimestamp(_ctime)
