@@ -12,7 +12,10 @@ RUN apt-get update &&\
     apt-get install -y libfreetype6-dev \
                         libatlas-base-dev \
                         liblapack-dev
-# COPY requirements.txt /opt/app  # for update image
+# For update image, rewrite below
+#   -COPY requirements.lock /opt/app
+#   +COPY requirements.txt /opt/app
+# Then execute `docker exec -it container_name pip freeze > requirements.lock`
 COPY requirements.lock /opt/app
 RUN pip install --upgrade -r requirements.lock
 

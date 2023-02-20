@@ -3,3 +3,4 @@ scikit-learn
 fastapi
 uvicorn
 jinja2
+chardet
