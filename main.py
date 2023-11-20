@@ -17,6 +17,11 @@ from pydantic import BaseModel
 from pid_classify import classifier, master
 from pid_category import categories
 
+VERSION = "v0.2.5"
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
 
 class Item(BaseModel):
     """品名(name)と型式(model)の組
@@ -44,12 +49,6 @@ class Item(BaseModel):
         if self.model is None:  # None なら全てTrueのSeries
             dmodel = ~dmodel
         return master[dname & dmodel]
-
-
-VERSION = "v0.2.4"
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 
 def to_object(df: pd.DataFrame) -> dict[str, Item]:

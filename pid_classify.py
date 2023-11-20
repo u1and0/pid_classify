@@ -37,6 +37,7 @@ dtype: float64
 import os
 from datetime import datetime
 import hashlib
+import sqlite3
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
@@ -65,16 +66,13 @@ def eval_encoding(filepath: str) -> str:
 
 
 def load_data(filepath: str, **kwargs) -> pd.DataFrame:
-    """csvファイルを読み込んで品番マスタデータを返す"""
-    df = pd.read_csv(
-        filepath,
-        index_col=0,
-        usecols=[0, 1, 2],
-        skiprows=1,
-        skipfooter=1,
-        engine="python",  # required by skipfooter option
-        **kwargs,
-    )
+    """sqlite3 DBファイルを読み込んで品番マスタデータを返す"""
+    try:
+        con = sqlite3.connect(filepath)
+        df = pd.read_sql("select * from 品番", con, index_col="品番", **kwargs)
+    finally:
+        con.close()
+    # 行頭のAAAなどのアルファベット文字列のみ抽出
     df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
     return df.loc[:, ["カテゴリ", "品名", "型式"]]
 
@@ -119,8 +117,7 @@ class Classifier:
     """品番カテゴリ分類器クラス"""
     def __init__(self, data: pd.DataFrame):
         """
-        learn from CSV filepath
-        CSV file: CP932 encoding
+        learn from SQLite3 filepath
 
         Properties:
             date: str
@@ -206,14 +203,7 @@ class Master(pd.DataFrame):
         """データをfilepathから読み込み、
         ファイルのctimeとhashをプロパティへ設定する。
         """
-        _encoding = eval_encoding(filepath)["encoding"]
-        # utf-8ならKaruwazaWebClientConsoleからの出力なので、タブセパレートになっている
-        # cp932やshift_jisならブラウザからの出力なので、コンマセパレートになっている
-        _sep = "\t" if _encoding == "utf-8" else ","
-        _data: pd.DataFrame = load_data(filepath,
-                                        encoding=_encoding,
-                                        sep=_sep,
-                                        **kwargs)
+        _data: pd.DataFrame = load_data(filepath, **kwargs)
         super().__init__(_data)
         _ctime: float = os.path.getctime(filepath)
         self.date = datetime.fromtimestamp(_ctime)
@@ -225,6 +215,6 @@ class Master(pd.DataFrame):
 # MAIN
 print("品番データを学習中...")
 cwd = os.path.dirname(__file__)  # pid_classify.py working directory
-filepath = cwd + "/data/pidmaster.csv"
+filepath = cwd + "/data/cwz.db"
 master = Master(filepath)  # 学習データとデータファイルプロパティ
 classifier = Classifier(master)  # 分類器
