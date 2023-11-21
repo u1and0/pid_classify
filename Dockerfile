@@ -6,7 +6,6 @@
 
 # Python build container
 FROM python:3.11.0-slim-bullseye as builder
-WORKDIR /opt/app
 RUN apt-get update &&\
     apt-get upgrade -y &&\
     apt-get install -y libfreetype6-dev \
@@ -16,8 +15,9 @@ RUN apt-get update &&\
 #   -COPY requirements.lock /opt/app
 #   +COPY requirements.txt /opt/app
 # Then execute `docker exec -it container_name pip freeze > requirements.lock`
-COPY requirements.lock /opt/app
-RUN pip install --upgrade -r requirements.lock
+WORKDIR /opt/app
+COPY requirements.lock /opt/app/
+RUN pip install --upgrade --no-cache-dir -r requirements.lock
 
 # TypeScript build container
 FROM node:18-alpine3.15 AS tsbuilder
@@ -47,4 +47,4 @@ CMD ["python", "main.py"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>" \
       description="品名と型式から品番カテゴリをAIで予測する" \
-      version="u1and0/pid_classify:v0.2.2"
+      version="u1and0/pid_classify:v0.2.6"
