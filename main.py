@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from pid_classify import classifier, master
 from pid_category import categories
 
-VERSION = "v0.2.5"
+VERSION = "v0.2.6"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")

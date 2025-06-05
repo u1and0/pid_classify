@@ -167,7 +167,7 @@ class Classifier:
         確率の上位順ディクショナリを返す。
         """
         pid_series = self._predict_proba_series(name, model).head(top)
-        se_iter = pid_series.iteritems()
+        se_iter = pid_series.items()
         predict_dict = {}
         cumsum_percentile = 0
         # 確率の合計が閾値を超えるまでイテレート
