@@ -1,0 +1,53 @@
+# Python dev docker image
+#
+# Usage:
+#   In host machine's shell
+#     $ docker pull u1and0/python
+#     $ docker run -it --rm -v `pwd`:/work -w /work u1and0/python
+#
+#   Using other command with activating `pipenv`
+#
+#       Open terminal
+#     $ docker run -it --rm -v `pwd`:/work -w /work u1and0/python\
+#           pipenv shell
+#
+#       Run jupyter console
+#     $ docker run -it --rm -v `pwd`:/work -w /work u1and0/python\
+#           pipenv run jupyter console
+#
+#       Any port
+#     $ docker run -it --rm -v `pwd`:/work -w /work -P u1and0/python\
+#           pipenv run jupyter lab
+#
+#       Specify port 8888
+#     $ docker run -it --rm -v `pwd`:/work -w /work -p 8888:8888 u1and0/python\
+#           pipenv run jupyter lab
+
+FROM u1and0/zplug:latest
+
+# パッケージマネージャーの準備
+USER root
+# パッケージマネージャ、線形代数関連、scipy, numpy関連、日本語フォント関連パッケージの導入
+RUN pacman -Syyu --noconfirm uv gcc-fortran blas lapack otf-ipafont &&\
+    pacman -Qtdq | xargs -r pacman --noconfirm -Rcns &&\
+    rm -rf /var/cache/pacman/pkg/*
+
+# 作業ディレクトリとユーザー切り替え
+USER u1and0
+WORKDIR /app
+ENV APP_HOME="/home/u1and0"
+ENV VENV_PATH="${APP_HOME}/.venv"
+
+# 仮想環境の構築
+RUN uv venv $VENV_PATH
+ENV PATH="${VENV_PATH}/bin:${APP_HOME}/.local/bin:$PATH"
+
+# 開発用パッケージのインストール
+COPY ./requirements-dev.txt /app/
+RUN uv pip sync requirements-dev.txt
+EXPOSE 8880
+CMD ["/usr/bin/zsh"]
+
+LABEL maintainer="u1and0"\
+      description="python dev container"\
+      description.ja="pid_classify開発用コンテナ。ipython, jupyter notebook, neovimによる開発"
