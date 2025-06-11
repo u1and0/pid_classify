@@ -42,6 +42,7 @@ import sqlite3
 import pandas as pd
 import logging
 import pickle
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -113,10 +114,23 @@ def training(
     le = LabelEncoder()
     y = le.fit_transform(pid_master["カテゴリ"].values)
 
-    # データをトレーニング用、テスト用に分割します。
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=0, stratify=y
-    )
+    # カテゴリごとのサンプル数をチェック
+    unique, counts = np.unique(y, return_counts=True)
+    min_samples = np.min(counts)
+
+    if min_samples < 2:
+        logger.warning(
+            f"Some categories have only {min_samples} sample(s). Removing stratification."
+        )
+        # stratifyを使わずに分割
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=0
+        )
+    else:
+        # データをトレーニング用、テスト用に分割します。
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=0, stratify=y
+        )
 
     # ナイーブベイズにより学習させます。
     clf = MultinomialNB(alpha=0.1)  # スムージングパラメータを調整
@@ -127,11 +141,18 @@ def training(
     score = accuracy_score(y_test, y_pred)
 
     # 分類レポートと混同行列を生成
-    target_names = le.inverse_transform(range(len(le.classes_)))
+    # テストセットに含まれるクラスのみを対象にする
+    unique_test_classes = np.unique(y_test)
+    target_names = le.inverse_transform(unique_test_classes)
+
     report = classification_report(
-        y_test, y_pred, target_names=target_names, output_dict=True
+        y_test,
+        y_pred,
+        labels=unique_test_classes,
+        target_names=target_names,
+        output_dict=True,
     )
-    conf_matrix = confusion_matrix(y_test, y_pred)
+    conf_matrix = confusion_matrix(y_test, y_pred, labels=unique_test_classes)
 
     evaluation_metrics = {
         "accuracy": score,
@@ -176,11 +197,10 @@ class Classifier:
             raise
 
     @staticmethod
-    def create_and_train(db_path: str):
-        """データベースパスから分類器を作成・学習して返すファクトリメソッド"""
+    def create_and_train(master: pd.DataFrame):
+        """分類器を作成・学習して返すファクトリメソッド"""
         try:
             logger.info("品番データを学習中...")
-            master = Master(db_path)
             return Classifier(master)
         except Exception as e:
             logger.error(f"分類器の作成に失敗しました: {e}")

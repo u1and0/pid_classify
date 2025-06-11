@@ -85,7 +85,7 @@ def load_data(path: str, **kwargs) -> pd.DataFrame:
                 "品　名": "name_string",
                 "使用\n単位": "unit",
                 }, axis=1)\
-        .fillna(method="ffill")  # NAN を前の行と同じにする
+        .ffill()  # NAN を前の行と同じにする
 
 
 df = load_data("./data/標準部品記号一覧.csv", encoding="cp932")

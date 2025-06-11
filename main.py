@@ -6,6 +6,8 @@ pid_classifyのwebインターフェース
 Setup env
 $ conda install -c uvicorn fastapi jinja2
 """
+
+import os
 from typing import Optional
 import pandas as pd
 import uvicorn
@@ -23,26 +25,26 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Initialize classifier and master data
-import os
 db_path = os.path.join(os.path.dirname(__file__), "data", "cwz.db")
-classifier = Classifier.create_and_train(db_path)
 master = Master(db_path)
+classifier = Classifier.create_and_train(master)
 
 
 class Item(BaseModel):
     """品名(name)と型式(model)の組
     { "name":"パッキン", "model":"174-452024-001"}
     """
+
     name: Optional[str] = None
     model: Optional[str] = None
 
     def like_search(self) -> pd.DataFrame:
         """グローバルオブジェクトのmaster(品番マスタ)から
         nameとmodelを含むあいまい検索"""
-        dname = master["品名"].str.contains(
-            self.name if self.name is not None else "")
+        dname = master["品名"].str.contains(self.name if self.name is not None else "")
         dmodel = master["型式"].str.contains(
-            self.model if self.model is not None else "")
+            self.model if self.model is not None else ""
+        )
         return master[dname & dmodel]
 
     def strict_search(self) -> pd.DataFrame:
@@ -58,7 +60,7 @@ class Item(BaseModel):
 
 
 def to_object(df: pd.DataFrame) -> dict[str, Item]:
-    """ DataFrameをItem型へ変換"""
+    """DataFrameをItem型へ変換"""
     renamer = {"品名": "name", "型式": "model"}
     renamed = df.rename(renamer, axis=1).loc[:, ["name", "model"]]
     return renamed.T.to_dict()
@@ -74,7 +76,8 @@ async def root():
 async def index(request: Request):
     """メインページ"""
     return templates.TemplateResponse(
-        "index.html", {
+        "index.html",
+        {
             "request": request,
             "version": VERSION,
             "score": classifier.score,
@@ -82,7 +85,8 @@ async def index(request: Request):
             "hash": master.hash,
             "registered": len(master),
             "categories": len(set(master["カテゴリ"])),
-        })
+        },
+    )
 
 
 @app.get("/hello")
@@ -93,7 +97,7 @@ async def hello():
 
 @app.post("/predict")
 async def predict(item: Item):
-    """ 品名と型式から予測される品番カテゴリと予測確率を返す。
+    """品名と型式から予測される品番カテゴリと予測確率を返す。
 
     ```
     $ curl -H "Content-Type: application/json" -d '{"name":"AAA", "model":"annonimous"}' localhost:8880/predict
@@ -173,10 +177,12 @@ async def category(class_: str, limit: int = 10):
 
 
 @app.get("/search")
-async def search(name: Optional[str] = None,
-                 model: Optional[str] = None,
-                 limit: int = 10,
-                 strict: bool = False):
+async def search(
+    name: Optional[str] = None,
+    model: Optional[str] = None,
+    limit: int = 10,
+    strict: bool = False,
+):
     # async def search(item: Item, limit: int = 10, strict: bool = False):
     #                  ^^^^^^^^^^
     # この書き方はGETメソッドにリクエストボディを要求してしまうので不可
