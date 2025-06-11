@@ -14,13 +14,19 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from pid_classify import classifier, master
+from pid_classify.lib.pid_classify import Classifier, Master
 from pid_category import categories
 
 VERSION = "v0.2.6"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Initialize classifier and master data
+import os
+db_path = os.path.join(os.path.dirname(__file__), "data", "cwz.db")
+classifier = Classifier.create_and_train(db_path)
+master = Master(db_path)
 
 
 class Item(BaseModel):
