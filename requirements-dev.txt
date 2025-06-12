@@ -14,8 +14,6 @@ certifi==2025.4.26
     #   httpx
 cfgv==3.4.0
     # via pre-commit
-chardet==5.2.0
-    # via your-fastapi-app (pyproject.toml)
 click==8.2.1
     # via
     #   deptry
