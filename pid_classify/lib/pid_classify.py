@@ -55,12 +55,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_data(filepath: str, **kwargs) -> pd.DataFrame:
+def load_data(filepath: str, query: str, **kwargs) -> pd.DataFrame:
     """sqlite3 DBファイルを読み込んで品番マスタデータを返す"""
     try:
         logger.info(f"Loading data from {filepath}")
         con = sqlite3.connect(filepath)
-        df = pd.read_sql("select * from 品番", con, index_col="品番", **kwargs)
+
+        df = pd.read_sql(query, con, index_col="品番", **kwargs)
     except Exception as e:
         logger.error(f"Failed to load data from {filepath}: {e}")
         raise
@@ -70,15 +71,17 @@ def load_data(filepath: str, **kwargs) -> pd.DataFrame:
     if df.empty:
         raise ValueError("Loaded DataFrame is empty")
 
+    # Handle missing values
+    if "品名" in df.columns:
+        df["品名"] = df["品名"].fillna("")
+    if "型式" in df.columns:
+        df["型式"] = df["型式"].fillna("")
+
     # 行頭のAAAなどのアルファベット文字列のみ抽出
     df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
 
-    # Handle missing values
-    df["品名"] = df["品名"].fillna("")
-    df["型式"] = df["型式"].fillna("")
-
     logger.info(f"Successfully loaded {len(df)} records")
-    return df.loc[:, ["カテゴリ", "品名", "型式"]]
+    return df
 
 
 def training(
@@ -339,7 +342,8 @@ class Master(pd.DataFrame):
         ファイルのctimeとhashをプロパティへ設定する。
         """
         try:
-            _data: pd.DataFrame = load_data(filepath, **kwargs)
+            query = "SELECT 品番, 品名, 型式 FROM 品番"
+            _data: pd.DataFrame = load_data(filepath, query, **kwargs)
             super().__init__(_data)
             _ctime: float = os.path.getctime(filepath)
             self.date = datetime.fromtimestamp(_ctime)
@@ -350,3 +354,44 @@ class Master(pd.DataFrame):
         except Exception as e:
             logger.error(f"Failed to initialize Master: {e}")
             raise
+
+
+class MiscMaster(pd.DataFrame):
+    """
+    諸口品マスタ
+    部品手配テーブルからS_から始まる品番とその品名を重複なしに取得した
+    """
+
+    def __init__(self, filepath: str, **kwargs):
+        query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品名 LIKE 'S_%'"
+        _data = load_data(filepath, query=query, **kwargs)
+
+        _data["型式"] = ""
+        _data["カテゴリ"] = _data["品番"]
+
+        super().__init__(_data)
+
+        # Masterクラスと同じプロパティ
+        # 更新日を取得
+        _ctime: float = os.path.getctime(filepath)
+        self.date = datetime.fromtimestamp(_ctime)
+        # データハッシュを取得
+        with open(filepath, "rb") as f:
+            _b = f.read()
+        self.hash = hashlib.sha256(_b).hexdigest()
+        logger.info(f"MiscMaster initialized with {len(_data)} records")
+
+
+class MiscClassifier:
+    """諸口品の品名から品番を予測する分類器"""
+
+    def __init__(self, data: pd.DataFrame):
+        self._classifier = Classifier(data)
+
+    def predict(self, name: str) -> str:
+        """品名から予測される品番を一つ返す"""
+        return self._classifier.predict(name, "")
+
+    def predict_parts_proba(self, name: str, **kwargs) -> dict[str, float]:
+        """品名から予測される品番と確率を返す"""
+        return self._classifier.predict_proba(name, "", **kwargs)
