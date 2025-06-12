@@ -37,8 +37,6 @@ cffi==1.17.1
     # via argon2-cffi-bindings
 cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.4.2
-    # via requests
 click==8.2.1
     # via
     #   deptry
