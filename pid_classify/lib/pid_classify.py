@@ -55,7 +55,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_data(filepath: str, query: str, **kwargs) -> pd.DataFrame:
+def _load_data(filepath: str, query: str, **kwargs) -> pd.DataFrame:
     """sqlite3 DBファイルを読み込んで品番マスタデータを返す"""
     try:
         logger.info(f"Loading data from {filepath}")
@@ -343,7 +343,7 @@ class Master(pd.DataFrame):
         """
         try:
             query = "SELECT 品番, 品名, 型式 FROM 品番"
-            _data: pd.DataFrame = load_data(filepath, query, **kwargs)
+            _data: pd.DataFrame = _load_data(filepath, query, **kwargs)
             super().__init__(_data)
             _ctime: float = os.path.getctime(filepath)
             self.date = datetime.fromtimestamp(_ctime)
@@ -363,11 +363,11 @@ class MiscMaster(pd.DataFrame):
     """
 
     def __init__(self, filepath: str, **kwargs):
-        query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品名 LIKE 'S_%'"
-        _data = load_data(filepath, query=query, **kwargs)
+        query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'"
+        _data = _load_data(filepath, query=query, **kwargs)
 
         _data["型式"] = ""
-        _data["カテゴリ"] = _data["品番"]
+        # _data["カテゴリ"] = _data["品番"]
 
         super().__init__(_data)
 
@@ -392,6 +392,11 @@ class MiscClassifier:
         """品名から予測される品番を一つ返す"""
         return self._classifier.predict(name, "")
 
-    def predict_parts_proba(self, name: str, **kwargs) -> dict[str, float]:
+    def predict_proba(self, name: str, **kwargs) -> dict[str, float]:
         """品名から予測される品番と確率を返す"""
         return self._classifier.predict_proba(name, "", **kwargs)
+
+    def predict_mask_proba(self, name: str, **kwargs) -> list[str]:
+        """品名から予測される品番のリストを返す"""
+        dic = self._classifier.predict_proba(name, "", **kwargs)
+        return list(dic.keys())
