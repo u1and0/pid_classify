@@ -31,6 +31,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Initialize classifier and master data
 db_path = os.path.join(os.path.dirname(__file__), "data", "cwz.db")
+_data: pd.DataFrame = DataLoader.load(db_path, "SELECT 品番, 品名, 型式 FROM 品番")
 master = Master(db_path)
 classifier = Classifier.create_and_train(master)
 

@@ -55,33 +55,45 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def _load_data(filepath: str, query: str, **kwargs) -> pd.DataFrame:
-    """sqlite3 DBファイルを読み込んで品番マスタデータを返す"""
-    try:
-        logger.info(f"Loading data from {filepath}")
-        con = sqlite3.connect(filepath)
+class DataLoader:
+    @staticmethod
+    def load(filepath: str, query: str) -> pd.DataFrame:
+        """sqlite3 DBファイルを読み込んで品番マスタデータを返す"""
+        try:
+            logger.info(f"Loading data from {filepath}")
+            con = sqlite3.connect(filepath)
 
-        df = pd.read_sql(query, con, index_col="品番", **kwargs)
-    except Exception as e:
-        logger.error(f"Failed to load data from {filepath}: {e}")
-        raise
-    finally:
-        con.close()
+            df = pd.read_sql(query, con, index_col="品番", **kwargs)
+        except Exception as e:
+            logger.error(f"Failed to load data from {filepath}: {e}")
+            raise
+        finally:
+            con.close()
 
-    if df.empty:
-        raise ValueError("Loaded DataFrame is empty")
+        if df.empty:
+            raise ValueError("Loaded DataFrame is empty")
 
-    # Handle missing values
-    if "品名" in df.columns:
-        df["品名"] = df["品名"].fillna("")
-    if "型式" in df.columns:
-        df["型式"] = df["型式"].fillna("")
+        # Handle missing values
+        if "品名" in df.columns:
+            df["品名"] = df["品名"].fillna("")
+        if "型式" in df.columns:
+            df["型式"] = df["型式"].fillna("")
 
-    # 行頭のAAAなどのアルファベット文字列のみ抽出
-    df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
+        # 行頭のAAAなどのアルファベット文字列のみ抽出
+        df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
 
-    logger.info(f"Successfully loaded {len(df)} records")
-    return df
+        logger.info(f"Successfully loaded {len(df)} records")
+        return df
+
+    @staticmethod
+    def create_file_metadata(filepath: str) -> dict:
+        _ctime = os.path.getctime(filepath)
+        with open(filepath, "rb") as f:
+            _b = f.read()
+        return {
+            "date": datetime.fromtimestamp(_ctime),
+            "hash": hashlib.sha256(_b).hexdigest(),
+        }
 
 
 def training(
@@ -337,23 +349,15 @@ class Master(pd.DataFrame):
         hash:str = file content hash
     """
 
-    def __init__(self, filepath: str, **kwargs):
+    def __init__(self, data: pd.DataFrame, metadata: dict = None):
         """データをfilepathから読み込み、
         ファイルのctimeとhashをプロパティへ設定する。
         """
-        try:
-            query = "SELECT 品番, 品名, 型式 FROM 品番"
-            _data: pd.DataFrame = _load_data(filepath, query, **kwargs)
-            super().__init__(_data)
-            _ctime: float = os.path.getctime(filepath)
-            self.date = datetime.fromtimestamp(_ctime)
-            with open(filepath, "rb") as f:
-                _b = f.read()
-            self.hash: str = hashlib.sha256(_b).hexdigest()
-            logger.info(f"Master data initialized with {len(_data)} records")
-        except Exception as e:
-            logger.error(f"Failed to initialize Master: {e}")
-            raise
+        super().__init__(data)
+        metadata = metadata or {}
+        self.data = metadata.get("date", datetime.now())
+        self.hash = metadata.get("hash", "test_hash")
+        logger.info(f"Master data initialized with {len(_data)} records")
 
 
 class MiscMaster(pd.DataFrame):
