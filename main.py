@@ -21,6 +21,7 @@ from pid_classify.lib.pid_classify import (
     MiscMaster,
     Classifier,
     MiscClassifier,
+    DataLoader,
 )
 from pid_category import categories
 
@@ -31,11 +32,18 @@ templates = Jinja2Templates(directory="templates")
 
 # Initialize classifier and master data
 db_path = os.path.join(os.path.dirname(__file__), "data", "cwz.db")
-_data: pd.DataFrame = DataLoader.load(db_path, "SELECT 品番, 品名, 型式 FROM 品番")
-master = Master(db_path)
+metadata = DataLoader.create_file_metadata(db_path)
+
+# 品番マスタの作成
+query = "SELECT 品番, 品名, 型式 FROM 品番"
+pid_df: pd.DataFrame = DataLoader.load(db_path, query)
+master = Master(pid_df, metadata)
 classifier = Classifier.create_and_train(master)
 
-misc_master = MiscMaster(db_path)
+# 部品手配テーブルから諸口品マスタの作成
+query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'"
+misc_df: pd.DataFrame = DataLoader.load(db_path, query)
+misc_master = MiscMaster(misc_df, metadata)
 misc_classifier = MiscClassifier.create_and_train(misc_master)
 
 

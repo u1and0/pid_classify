@@ -37,6 +37,7 @@ dtype: float64
 
 import os
 from datetime import datetime
+from typing import Union, Optional, TypedDict
 import hashlib
 import sqlite3
 import pandas as pd
@@ -55,6 +56,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class Metadata(TypedDict):
+    hash: str
+    date: datetime
+
+
 class DataLoader:
     @staticmethod
     def load(filepath: str, query: str) -> pd.DataFrame:
@@ -62,8 +68,7 @@ class DataLoader:
         try:
             logger.info(f"Loading data from {filepath}")
             con = sqlite3.connect(filepath)
-
-            df = pd.read_sql(query, con, index_col="品番", **kwargs)
+            df = pd.read_sql(query, con)
         except Exception as e:
             logger.error(f"Failed to load data from {filepath}: {e}")
             raise
@@ -79,14 +84,11 @@ class DataLoader:
         if "型式" in df.columns:
             df["型式"] = df["型式"].fillna("")
 
-        # 行頭のAAAなどのアルファベット文字列のみ抽出
-        df["カテゴリ"] = [str(i).split("-")[0] for i in df.index]
-
         logger.info(f"Successfully loaded {len(df)} records")
         return df
 
     @staticmethod
-    def create_file_metadata(filepath: str) -> dict:
+    def create_file_metadata(filepath: str) -> Metadata:
         _ctime = os.path.getctime(filepath)
         with open(filepath, "rb") as f:
             _b = f.read()
@@ -349,41 +351,40 @@ class Master(pd.DataFrame):
         hash:str = file content hash
     """
 
-    def __init__(self, data: pd.DataFrame, metadata: dict = None):
+    def __init__(self, data: pd.DataFrame, metadata: Optional[Metadata] = None):
         """データをfilepathから読み込み、
         ファイルのctimeとhashをプロパティへ設定する。
         """
+        if "品番" in data.columns:
+            data = data.set_index("品番")
         super().__init__(data)
+        # カテゴリ作成はサブクラスでオーバーライドできる
+        self._create_category_column()
+
+        # メタデータの追加
         metadata = metadata or {}
-        self.data = metadata.get("date", datetime.now())
+        self.date = metadata.get("date", datetime.now())
         self.hash = metadata.get("hash", "test_hash")
-        logger.info(f"Master data initialized with {len(_data)} records")
+
+    def _create_category_column(self):
+        """行頭のAAAなどのアルファベット文字列のみ抽出"""
+        self["カテゴリ"] = [str(i).split("-")[0] for i in self.index]
 
 
-class MiscMaster(pd.DataFrame):
+class MiscMaster(Master):
     """
-    諸口品マスタ
+    Masterを継承した 諸口品マスタ
     部品手配テーブルからS_から始まる品番とその品名を重複なしに取得した
     """
 
-    def __init__(self, filepath: str, **kwargs):
-        query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'"
-        _data = _load_data(filepath, query=query, **kwargs)
-
+    def __init__(self, data: pd.DataFrame, metadata: Optional[Metadata] = None):
+        _data = data.copy()
         _data["型式"] = ""
-        # _data["カテゴリ"] = _data["品番"]
+        super().__init__(_data, metadata)
 
-        super().__init__(_data)
-
-        # Masterクラスと同じプロパティ
-        # 更新日を取得
-        _ctime: float = os.path.getctime(filepath)
-        self.date = datetime.fromtimestamp(_ctime)
-        # データハッシュを取得
-        with open(filepath, "rb") as f:
-            _b = f.read()
-        self.hash = hashlib.sha256(_b).hexdigest()
-        logger.info(f"MiscMaster initialized with {len(_data)} records")
+    def _create_category_column(self):
+        """品番列をそのままカテゴリとする"""
+        self["カテゴリ"] = self.index
 
 
 class MiscClassifier:
