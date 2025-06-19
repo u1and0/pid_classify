@@ -37,7 +37,7 @@ dtype: float64
 
 import os
 from datetime import datetime
-from typing import Union, Optional, TypedDict
+from typing import Optional, TypedDict
 import hashlib
 import sqlite3
 import pandas as pd
@@ -207,8 +207,6 @@ class Classifier:
             self.clf, self.vectorizer, self.le, self.score, self.evaluation_metrics = (
                 training(data)
             )
-            logger.info(f"学習精度 {self.score:.4}で学習を完了しました。")
-            assert 0.60 < self.score < 1, "適切な精度で学習できていません。"
         except Exception as e:
             logger.error(f"Classifier initialization failed: {e}")
             raise
@@ -218,7 +216,10 @@ class Classifier:
         """分類器を作成・学習して返すファクトリメソッド"""
         try:
             logger.info("品番データを学習中...")
-            return Classifier(master)
+            classifier = Classifier(master)
+            assert 0.60 < classifier.score < 1, "適切な精度で学習できていません。"
+            logger.info(f"学習精度 {classifier.score:.4}で学習を完了しました。")
+            return classifier
         except Exception as e:
             logger.error(f"分類器の作成に失敗しました: {e}")
             raise
@@ -392,6 +393,23 @@ class MiscClassifier:
 
     def __init__(self, data: pd.DataFrame):
         self._classifier = Classifier(data)
+
+    @staticmethod
+    def create_and_train(master: pd.DataFrame):
+        """分類器を作成・学習して返すファクトリメソッド"""
+        try:
+            logger.info("部品手配データを学習中...")
+            classifier = MiscClassifier(master)
+            assert 0.60 < classifier._classifier.score < 1, (
+                "適切な精度で学習できていません。"
+            )
+            logger.info(
+                f"学習精度 {classifier._classifier.score:.4}で学習を完了しました。"
+            )
+            return classifier
+        except Exception as e:
+            logger.error(f"分類器の作成に失敗しました: {e}")
+            raise
 
     def predict(self, name: str) -> str:
         """品名から予測される品番を一つ返す"""

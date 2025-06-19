@@ -193,6 +193,25 @@ async def category(class_: str, limit: int = 10):
     return obj
 
 
+@app.get("/predict/misc")
+async def misc_predict(name: str, threshold: float = 0.0):
+    """品名から予測される諸口品番カテゴリと予測確率を返す。
+
+    ```
+    $ curl 'localhost:8880/misc/predict?name=シリコンゴム&threshold=0.95'
+    {"S_HOZAI":0.8287681977055886,"S_SHOMO":0.11253231047825198,"S_ZAIRYO":0.04253258924038836}
+    ```
+    """
+    print(f"received: name={name}, threshold={threshold}")
+    try:
+        predict_dict = misc_classifier.predict_proba(name, threshold=threshold)
+        print(f"transfer: {predict_dict}")
+        return predict_dict
+    except Exception as e:
+        content = {"error": str(e)}
+        return JSONResponse(content, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @app.get("/search")
 async def search(
     name: Optional[str] = None,
