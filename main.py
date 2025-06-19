@@ -240,6 +240,7 @@ async def predict(item: Item, response: Response):
     try:
         predict_dict = classifier.predict_proba(name, model)
         logger.info(f"Deprecated predict result: {predict_dict}")
+        return predict_dict
     except Exception as e:
         logger.error(f"Deprecated predict failed: {e}")
         content = {"error": f"Prediction failed: {str(e)}"}
