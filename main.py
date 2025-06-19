@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from pid_classify.lib.pid_category import Categories
 from pid_classify.lib.pid_classify import (
     Master,
     MiscMaster,
@@ -24,7 +25,6 @@ from pid_classify.lib.pid_classify import (
     MiscClassifier,
     DataLoader,
 )
-from pid_category import categories
 
 VERSION = "v0.2.6r"
 
@@ -52,6 +52,11 @@ query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'
 misc_df: pd.DataFrame = DataLoader.load(db_path, query)
 misc_master = MiscMaster(misc_df, metadata)
 misc_classifier = MiscClassifier.create_and_train(misc_master)
+
+# カテゴリ登録
+csv_path = os.path.join(os.path.dirname(__file__), "data", "標準部品記号一覧.csv")
+df = Categories.load_data(csv_path, encoding="cp932")
+categories = Categories(*df.itertuples())
 
 
 class CategoryPredictRequest(BaseModel):

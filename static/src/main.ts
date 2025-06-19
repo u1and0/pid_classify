@@ -19,11 +19,11 @@ type Items = Map<Pid, Item>;
 const root: URL = new URL(window.location.href);
 // index.htmlの要素
 const resultDiv = document.getElementById("result");
-const exampleTable = document.getElementById("example-table");
-const nameInput: HTMLInputElement = document.getElementById("name");
-const modelInput: HTMLInputElement = document.getElementById("model");
-const nameDataList: HTMLElement = document.getElementById("name-list");
-const modelDataList: HTMLElement = document.getElementById("model-list");
+const exampleTable = document.getElementById("example-table") as HTMLTableElement;
+const nameInput = document.getElementById("name") as HTMLInputElement;
+const modelInput = document.getElementById("model") as HTMLInputElement;
+const nameDataList = document.getElementById("name-list") as HTMLElement;
+const modelDataList = document.getElementById("model-list") as HTMLElement;
 // fetchList()を実行したときのtimeoutID
 // setTimeout()に指定されたミリ秒数内に入力をすると
 // clearTimeout()によりキャンセルされる
@@ -31,6 +31,7 @@ let timeoutID: number;
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
+  if (!resultDiv) return;
   resultDiv.innerHTML = ""; // Reset result div
   const label = document.createElement("div");
   label.classList.add("alert", level);
@@ -80,14 +81,15 @@ function showCategoryBadges(pidMap: Map<string, number>) {
   Object.keys(pidMap).forEach((pid: string, i: number) => {
     const badge = document.createElement("button");
     if (badge === null) return;
-    const proba: number = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
+    const proba: number = (pidMap.get(pid) || 0) * 100; // 予測確率6桁 99.9999%
+    const probaStr = proba.toPrecision(4);
     badge.setAttribute("type", "button");
-    badge.setAttribute("title", `予測確率${proba}%`);
+    badge.setAttribute("title", `予測確率${probaStr}%`);
     badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
     badge.innerHTML = pid; // PID カテゴリ
     // クリックすると類似品番を表示するjsを配置
     badge.setAttribute("onclick", "getItem(this.textContent)");
-    resultDiv.appendChild(badge);
+    if (resultDiv) resultDiv.appendChild(badge);
   });
 }
 
@@ -160,6 +162,7 @@ function createHeader(
     tr.appendChild(th); // thをtrへ追加
   });
   table.appendChild(theadElem);
+  return theadElem;
 }
 
 // APIで取得したJSON(Items型)でテーブル作成
@@ -168,7 +171,7 @@ function createTable(items: Map<string, Item>, caption: string) {
   exampleTable.innerHTML = ""; // Reset table
   // Write table header
   createHeader(
-    exampleTable, // table element
+    exampleTable as HTMLTableElement, // table element
     ["品番", "品名", "型式"], // header
     caption,
   );
