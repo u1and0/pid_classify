@@ -1,5 +1,5 @@
 [project]
-name = "your-fastapi-app"
+name = "pid_classify"
 version = "0.1.0"
 dependencies = [
     "pandas",
@@ -7,7 +7,6 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "jinja2",
-    "chardet",
 ]
 
 [project.optional-dependencies]
@@ -27,4 +26,5 @@ dev = [
     "tqdm",
     "pre-commit",
     "deptry",
+    "jupyter",
 ]
