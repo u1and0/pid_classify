@@ -5,38 +5,45 @@
 # data以下にpidmaster.csvという名前の品番マスタ一覧のCSVファイルが必要です。
 
 # Python build container
-FROM python:3.11.0-slim-bullseye as builder
+FROM python:3.13.5-slim-bullseye as builder
 RUN apt-get update &&\
     apt-get upgrade -y &&\
-    apt-get install -y libfreetype6-dev \
-                        libatlas-base-dev \
-                        liblapack-dev
-# For update image, rewrite below
-#   -COPY requirements.lock /opt/app
-#   +COPY requirements.txt /opt/app
-# Then execute `docker exec -it container_name pip freeze > requirements.lock`
+    apt-get install -y --no-install-recommends\
+                    libfreetype6-dev\
+                    libatlas-base-dev\
+                    liblapack-dev\
+                    curl
+
+# uvのインストール
+# By default, uv is installed to ~/.local/bin
+# https://docs.astral.sh/uv/reference/installer/
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh
+
+# pyproject.tomlから最新のパッケージをインストール
+# uv sync は pyproject.toml (およびロックファイル) に基づいて依存関係を同期します。
+# Docker環境では、仮想環境を作成せずにシステムサイトパッケージに直接インストールするため
+# --system フラグを使用します。
 WORKDIR /opt/app
-COPY requirements.lock /opt/app/
-RUN pip install --upgrade --no-cache-dir -r requirements.lock
+COPY pyproject.toml /opt/app/
+RUN uv sync
 
 # TypeScript build container
-FROM node:18-alpine3.15 AS tsbuilder
+FROM node:20.19.3-bullseye-slim AS tsbuilder
 COPY ./static /tmp/static
 WORKDIR /tmp/static
-RUN npm install -D typescript ts-node ts-node-dev fzf
-RUN npx tsc || exit 0  # Ignore TypeScript build error
+RUN npm install -D typescript ts-node ts-node-dev
+RUN npx tsc # || exit 0  # Ignore TypeScript build error
 
 # 実行コンテナ
-FROM python:3.11.0-slim-bullseye as runner
+FROM python:3.13.5-slim-bullseye  as runner
 WORKDIR /work
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=tsbuilder /tmp/static/main.js /work/static/main.js
 
 RUN useradd -r classify_user
-COPY main.py /work
-COPY pid_classify.py /work
-COPY pid_category.py /work
-COPY templates/index.html /work/templates/index.html
+COPY main.py /work/main.py
+COPY pid_classify /work/pid_classify/
+COPY templates/ /work/templates/
 COPY static/favicon.png /work/static/favicon.png
 RUN chmod -R +x /work/main.py
 
