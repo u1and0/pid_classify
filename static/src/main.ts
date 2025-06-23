@@ -296,3 +296,41 @@ function fetchList(partsName: string) {
       });
   }, 400); // 1.5秒入力がなければ、品名一覧をfetch
 }
+
+// predict/misc テストページ用の機能
+function initPredictMiscPage() {
+  const predictForm = document.getElementById('predictForm');
+  if (!predictForm) return; // predict_misc.htmlでない場合は何もしない
+
+  predictForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const hinmei = (document.getElementById('hinmei') as HTMLInputElement).value;
+    const resultDisplay = document.getElementById('result') as HTMLPreElement;
+
+    try {
+      const response = await fetch('/predict/misc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: hinmei })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      resultDisplay.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      resultDisplay.textContent = 'エラー: ' + (error as Error).message;
+      console.error('Error:', error);
+    }
+  });
+}
+
+// ページ読み込み完了時に初期化
+document.addEventListener('DOMContentLoaded', () => {
+  initPredictMiscPage();
+});

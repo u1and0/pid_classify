@@ -127,7 +127,8 @@ async def train_models():
             classifier = Classifier.create_and_train(master)
 
             # 部品手配テーブルから諸口品マスタの作成
-            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'"
+            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 諸口品 = '諸口品'"
+
             misc_df: pd.DataFrame = DataLoader.load(db_path, query)
             misc_master = MiscMaster(misc_df, metadata)
             misc_classifier = MiscClassifier.create_and_train(misc_master)
@@ -297,6 +298,18 @@ async def index(request: Request):
                 "message": "Models are loading. Please wait...",
             },
         )
+
+
+@app.get("/predict_misc")
+async def predict_misc_page(request: Request):
+    """諸口品番予測テストページ"""
+    return templates.TemplateResponse(
+        "predict_misc_test.html",
+        {
+            "request": request,
+            "version": VERSION,
+        },
+    )
 
 
 @app.get("/hello")
