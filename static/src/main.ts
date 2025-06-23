@@ -306,6 +306,7 @@ function initPredictMiscPage() {
     event.preventDefault();
 
     const hinmei = (document.getElementById('hinmei') as HTMLInputElement).value;
+    const threshold = parseFloat((document.getElementById('threshold') as HTMLInputElement).value);
     const resultDisplay = document.getElementById('result') as HTMLPreElement;
 
     try {
@@ -314,7 +315,7 @@ function initPredictMiscPage() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name: hinmei })
+        body: JSON.stringify({ name: hinmei, threshold: threshold })
       });
 
       if (!response.ok) {
