@@ -364,11 +364,16 @@ async def predict_misc(request: MiscPredictRequest):
         {"S_HOZAI":0.8287681977055886,"S_SHOMO":0.11253231047825198,"S_ZAIRYO":0.04253258924038836}
         ```
     """
+    # 品名がなければ終了
+    if not request.name:
+        content = {"error": "品名を指定する必要があります。"}
+        return JSONResponse(content, status.HTTP_400_BAD_REQUEST)
+
     logger.info(f"Misc prediction request: name={request.name}")
 
     if model_manager.misc_classifier is None:
         content = {
-            "error": "Misc model not available. Please wait for training to complete."
+            "error": "諸口品番推論が利用できません。しばらくしてから再度試してください。"
         }
         return JSONResponse(content, status.HTTP_503_SERVICE_UNAVAILABLE)
 
