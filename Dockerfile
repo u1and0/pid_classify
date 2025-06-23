@@ -46,5 +46,5 @@ EXPOSE 8880
 CMD ["python", "main.py"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>" \
-      description="品名と型式から品番カテゴリをAIで予測する" \
-      version="u1and0/pid_classify:v0.2.6"
+      description="品名と型式から品番カテゴリや諸口品番を予測する" \
+      name="u1and0/pid_classify"

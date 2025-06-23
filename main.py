@@ -30,7 +30,7 @@ from pid_classify.lib.pid_classify import (
     DataLoader,
 )
 
-VERSION = "v0.2.6r"
+VERSION = "v0.3.0"
 
 # 再学習間隔の設定（時間単位）
 RETRAIN_INTERVAL_HOURS = int(os.environ.get("RETRAIN_INTERVAL_HOURS", "1"))
@@ -92,7 +92,9 @@ class ModelManager:
             "model_loaded": self.classifier is not None,
             "misc_model_loaded": self.misc_classifier is not None,
             "registered_count": len(self.master) if self.master is not None else 0,
-            "categories_count": len(set(self.master["カテゴリ"])) if self.master is not None else 0,
+            "categories_count": len(set(self.master["カテゴリ"]))
+            if self.master is not None
+            else 0,
             "ready": self.is_ready(),
         }
 
