@@ -5,7 +5,7 @@
 # data以下にpidmaster.csvという名前の品番マスタ一覧のCSVファイルが必要です。
 
 # Python build container
-FROM python:3.13.5-slim-bullseye as builder
+FROM python:3.13.5-slim-bullseye AS builder
 RUN apt-get update &&\
     apt-get upgrade -y &&\
     apt-get install -y --no-install-recommends\
@@ -23,9 +23,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/
 # uv sync は pyproject.toml (およびロックファイル) に基づいて依存関係を同期します。
 # Docker環境では、仮想環境を作成せずにシステムサイトパッケージに直接インストールするため
 # --system フラグを使用します。
-WORKDIR /opt/app
-COPY pyproject.toml /opt/app/
-RUN uv sync
+WORKDIR /app
+COPY pyproject.toml /app/
+RUN uv pip compile pyproject.toml --output-file requirements.lock &&\
+    uv pip sync --system requirements.lock
 
 # TypeScript build container
 FROM node:20.19.3-bullseye-slim AS tsbuilder
@@ -35,20 +36,20 @@ RUN npm install -D typescript ts-node ts-node-dev
 RUN npx tsc # || exit 0  # Ignore TypeScript build error
 
 # 実行コンテナ
-FROM python:3.13.5-slim-bullseye  as runner
-WORKDIR /work
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=tsbuilder /tmp/static/main.js /work/static/main.js
+FROM python:3.13.5-slim-bullseye AS runner
+WORKDIR /app
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=tsbuilder /tmp/static/main.js /app/static/main.js
 
 RUN useradd -r classify_user
-COPY main.py /work/main.py
-COPY pid_classify /work/pid_classify/
-COPY templates/ /work/templates/
-COPY static/favicon.png /work/static/favicon.png
-RUN chmod -R +x /work/main.py
+COPY main.py /app/main.py
+COPY pid_classify /app/pid_classify/
+COPY templates/ /app/templates/
+COPY static/favicon.png /app/static/favicon.png
+RUN chmod -R +x /app/main.py
 
 USER classify_user
-ENV PYTHONPATH="/work"
+ENV PYTHONPATH="/app"
 EXPOSE 8880
 CMD ["python", "main.py"]
 
