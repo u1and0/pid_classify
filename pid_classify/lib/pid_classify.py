@@ -110,17 +110,34 @@ def training(
     品番
     AAA-123  ケーブル type123
     ...
+
+    ## パフォーマンス
+
+    ### TfidfVectorizer
+    INFO:pid_classify.lib.pid_classify:学習精度 0.7906で学習を完了しました。
+    INFO:pid_classify.lib.pid_classify:学習精度 0.8671で学習を完了しました。
+
+    ### HashingVectorizer
+    INFO:pid_classify.lib.pid_classify:学習精度 0.8199で学習を完了しました。
+    INFO:pid_classify.lib.pid_classify:学習精度 0.842で学習を完了しました。
     """
     logger.info("Starting model training")
 
     # テキストをTF-IDF特徴量に変換
-    vectorizer = TfidfVectorizer(
+k   vectorizer = TfidfVectorizer(
         analyzer="char",
         ngram_range=(3, 3),  # trigram
         max_features=50000,  # Feature数を制限
         min_df=2,  # 最低2回出現する特徴量のみ使用
         max_df=0.95,  # 95%以上のドキュメントに出現する特徴量は除外
     )
+    # vectorizer = HashingVectorizer(
+    #     n_features=2**16,
+    #     analyzer="char",
+    #     ngram_range=(3, 3),  # trigram
+    #     binary=True,
+    #     norm=None,
+    # )
 
     # 品名 / 型式をタブ区切り
     X = vectorizer.fit_transform(
