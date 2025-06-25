@@ -30,7 +30,7 @@ from pid_classify.lib.pid_classify import (
     DataLoader,
 )
 
-VERSION = "v0.2.6r"
+VERSION = "v0.3.0"
 
 # 再学習間隔の設定（時間単位）
 RETRAIN_INTERVAL_HOURS = int(os.environ.get("RETRAIN_INTERVAL_HOURS", "1"))
@@ -92,7 +92,9 @@ class ModelManager:
             "model_loaded": self.classifier is not None,
             "misc_model_loaded": self.misc_classifier is not None,
             "registered_count": len(self.master) if self.master is not None else 0,
-            "categories_count": len(set(self.master["カテゴリ"])) if self.master is not None else 0,
+            "categories_count": len(set(self.master["カテゴリ"]))
+            if self.master is not None
+            else 0,
             "ready": self.is_ready(),
         }
 
@@ -125,7 +127,8 @@ async def train_models():
             classifier = Classifier.create_and_train(master)
 
             # 部品手配テーブルから諸口品マスタの作成
-            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 品番 LIKE 'S_%'"
+            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 諸口品 = '諸口品'"
+
             misc_df: pd.DataFrame = DataLoader.load(db_path, query)
             misc_master = MiscMaster(misc_df, metadata)
             misc_classifier = MiscClassifier.create_and_train(misc_master)
@@ -297,6 +300,18 @@ async def index(request: Request):
         )
 
 
+@app.get("/predict_misc")
+async def predict_misc_page(request: Request):
+    """諸口品番予測テストページ"""
+    return templates.TemplateResponse(
+        "predict_misc_test.html",
+        {
+            "request": request,
+            "version": VERSION,
+        },
+    )
+
+
 @app.get("/hello")
 async def hello():
     """サーバー生きているか確認"""
@@ -362,11 +377,16 @@ async def predict_misc(request: MiscPredictRequest):
         {"S_HOZAI":0.8287681977055886,"S_SHOMO":0.11253231047825198,"S_ZAIRYO":0.04253258924038836}
         ```
     """
+    # 品名がなければ終了
+    if not request.name:
+        content = {"error": "品名を指定する必要があります。"}
+        return JSONResponse(content, status.HTTP_400_BAD_REQUEST)
+
     logger.info(f"Misc prediction request: name={request.name}")
 
     if model_manager.misc_classifier is None:
         content = {
-            "error": "Misc model not available. Please wait for training to complete."
+            "error": "諸口品番推論が利用できません。しばらくしてから再度試してください。"
         }
         return JSONResponse(content, status.HTTP_503_SERVICE_UNAVAILABLE)
 

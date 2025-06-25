@@ -44,7 +44,7 @@ import pandas as pd
 import logging
 import pickle
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
@@ -100,7 +100,7 @@ class DataLoader:
 
 def training(
     pid_master: pd.DataFrame,
-) -> tuple[MultinomialNB, TfidfVectorizer, LabelEncoder, float, dict]:
+) -> tuple[MultinomialNB, HashingVectorizer, LabelEncoder, float, dict]:
     """品番データを学習して学習器を生成する
     下記データフレームの品名と型式のタブ文字区切りを説明変数に
     品番を目的変数に置き換えて学習する。
@@ -110,16 +110,26 @@ def training(
     品番
     AAA-123  ケーブル type123
     ...
+
+    ## パフォーマンス
+
+    ### TfidfVectorizer
+    INFO:pid_classify.lib.pid_classify:学習精度 0.7906で学習を完了しました。
+    INFO:pid_classify.lib.pid_classify:学習精度 0.8671で学習を完了しました。
+
+    ### HashingVectorizer
+    INFO:pid_classify.lib.pid_classify:学習精度 0.8199で学習を完了しました。
+    INFO:pid_classify.lib.pid_classify:学習精度 0.842で学習を完了しました。
     """
     logger.info("Starting model training")
 
     # テキストをTF-IDF特徴量に変換
-    vectorizer = TfidfVectorizer(
+    vectorizer = HashingVectorizer(
+        n_features=2**16,
         analyzer="char",
         ngram_range=(3, 3),  # trigram
-        max_features=50000,  # Feature数を制限
-        min_df=2,  # 最低2回出現する特徴量のみ使用
-        max_df=0.95,  # 95%以上のドキュメントに出現する特徴量は除外
+        binary=True,
+        norm=None,
     )
 
     # 品名 / 型式をタブ区切り

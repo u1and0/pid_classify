@@ -35,7 +35,7 @@ const modelDataList = document.getElementById("model-list") as HTMLElement;
 // fetchList()を実行したときのtimeoutID
 // setTimeout()に指定されたミリ秒数内に入力をすると
 // clearTimeout()によりキャンセルされる
-let timeoutID: number;
+let timeoutID: number | undefined;
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
@@ -269,7 +269,7 @@ function fetchList(partsName: string) {
   nameDataList.innerHTML = ""; // reset datalist
   modelDataList.innerHTML = ""; // reset datalist
   partsName = partsName.trim();
-  if (partsName === "") return;
+  if (partsName === "" || timeoutID === undefined) return;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
     const url = `${root.origin}/search?limit=30&name=${partsName}`;
@@ -294,5 +294,48 @@ function fetchList(partsName: string) {
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
       });
-  }, 400); // 1.5秒入力がなければ、品名一覧をfetch
+  }, 400) as unknown as number; // 1.5秒入力がなければ、品名一覧をfetch
+  // typescript エラー回避のための2段階キャスト
 }
+
+// predict/misc テストページ用の機能
+function initPredictMiscPage() {
+  const predictForm = document.getElementById("predictForm");
+  if (!predictForm) return; // predict_misc.htmlでない場合は何もしない
+
+  predictForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const hinmei =
+      (document.getElementById("hinmei") as HTMLInputElement).value;
+    const threshold = parseFloat(
+      (document.getElementById("threshold") as HTMLInputElement).value,
+    );
+    const resultDisplay = document.getElementById("result") as HTMLPreElement;
+
+    try {
+      const response = await fetch("/predict/misc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: hinmei, threshold: threshold }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      resultDisplay.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      resultDisplay.textContent = "エラー: " + (error as Error).message;
+      console.error("Error:", error);
+    }
+  });
+}
+
+// ページ読み込み完了時に初期化
+document.addEventListener("DOMContentLoaded", () => {
+  initPredictMiscPage();
+});
