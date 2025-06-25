@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" End point
+"""End point
 GET /description/ABC
 
 フロントエンドからカテゴリ文字列ABC(英字3桁)を受け取る
@@ -13,6 +13,7 @@ GET /description/ABC
 ```
 
 """
+
 from collections import UserDict
 from dataclasses import dataclass
 import pandas as pd
@@ -25,6 +26,7 @@ class Category:
     Usage:
         cat = Category('A', 'A', '図番', 'A', '製品名記入', 'EA')
     """
+
     class_symbol: str
     type_symbol: str
     type_string: str
@@ -49,7 +51,7 @@ class Categories(UserDict):
     値にはCategoryをセットする。
 
     Usage:
-        >>> df = load_data("./data/標準部品記号一覧.csv", encoding="cp932")
+        >>> df = Categories.load_data("./data/標準部品記号一覧.csv", encoding="cp932")
         >>> categories = Categories(*df.itertuples())
 
         >>> categories
@@ -66,27 +68,29 @@ class Categories(UserDict):
                 name_string='製品名記入',
                 unit='EA・SE・組・台・箱・式')
     """
+
     def __init__(self, *args):
         # [1:] でインデックス行を省略
         self.data = {r[1] + r[2] + r[4]: Category(*r[1:]) for r in args}
 
-
-def load_data(path: str, **kwargs) -> pd.DataFrame:
-    """標準部品記号一覧.csvを読み込んで、データフレーム化する。
-    前処理として、 印刷用の繰り返しヘッダー行を削除してから
-    標準部品記号一覧.xlsを 標準部品記号一覧.csvとして保存する。
-    """
-    return pd.read_csv(path, **kwargs)\
-        .rename({  # 列名変更
-            "分類\n記号": "class_symbol",
-            "種類\n記号": "type_symbol",
-            "種　類": "type_string",
-                "品名\n記号": "name_symbol",
-                "品　名": "name_string",
-                "使用\n単位": "unit",
-                }, axis=1)\
-        .fillna(method="ffill")  # NAN を前の行と同じにする
-
-
-df = load_data("./data/標準部品記号一覧.csv", encoding="cp932")
-categories = Categories(*df.itertuples())
+    @staticmethod
+    def load_data(path: str, **kwargs) -> pd.DataFrame:
+        """標準部品記号一覧.csvを読み込んで、データフレーム化する。
+        前処理として、 印刷用の繰り返しヘッダー行を削除してから
+        標準部品記号一覧.xlsを 標準部品記号一覧.csvとして保存する。
+        """
+        return (
+            pd.read_csv(path, **kwargs)
+            .rename(
+                {  # 列名変更
+                    "分類\n記号": "class_symbol",
+                    "種類\n記号": "type_symbol",
+                    "種　類": "type_string",
+                    "品名\n記号": "name_symbol",
+                    "品　名": "name_string",
+                    "使用\n単位": "unit",
+                },
+                axis=1,
+            )
+            .ffill()
+        )  # NAN を前の行と同じにする

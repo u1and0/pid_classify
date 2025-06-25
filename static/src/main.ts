@@ -8,29 +8,38 @@ type Level =
   | "alert-info"
   | "alert-light"
   | "alert-dark";
-// JSONで返ってくる品名、型式のペア
+/** JSONで返ってくる品名、型式のペア*/
 type Item = {
-  name: string;
-  model: string;
+  name: string; // 品名
+  model: string; //型式
 };
+/** 品番 */
 type Pid = string;
+/** 品番をキーにした品名と型式 */
 type Items = Map<Pid, Item>;
+
+/** カテゴリに分類される確率 */
+type CategoryProba = { [key: string]: number };
+
 // 最上位のURL
-const root: URL = new URL(window.location.href);
+const root: URL = new URL(globalThis.location.href);
 // index.htmlの要素
 const resultDiv = document.getElementById("result");
-const exampleTable = document.getElementById("example-table");
-const nameInput: HTMLInputElement = document.getElementById("name");
-const modelInput: HTMLInputElement = document.getElementById("model");
-const nameDataList: HTMLElement = document.getElementById("name-list");
-const modelDataList: HTMLElement = document.getElementById("model-list");
+const exampleTable = document.getElementById(
+  "example-table",
+) as HTMLTableElement;
+const nameInput = document.getElementById("name") as HTMLInputElement;
+const modelInput = document.getElementById("model") as HTMLInputElement;
+const nameDataList = document.getElementById("name-list") as HTMLElement;
+const modelDataList = document.getElementById("model-list") as HTMLElement;
 // fetchList()を実行したときのtimeoutID
 // setTimeout()に指定されたミリ秒数内に入力をすると
 // clearTimeout()によりキャンセルされる
-let timeoutID: number;
+let timeoutID: number | undefined;
 
 // エントリポイントアクセス後の状態をメッセージで表示
 function resultAlertLabel(msg: string, level: Level) {
+  if (!resultDiv) return;
   resultDiv.innerHTML = ""; // Reset result div
   const label = document.createElement("div");
   label.classList.add("alert", level);
@@ -53,8 +62,9 @@ async function postData(url: string, data: Item) {
   return resp.json();
 }
 
-// iが0,1,2,3,4 のサイクリック
-// badge色を返す
+/** iが0,1,2,3,4 のサイクリック
+ * badge色を返す
+ */
 function badgeSelector(i: number): string {
   const colors = [
     "bg-primary",
@@ -73,21 +83,28 @@ function badgeSelector(i: number): string {
 }
 
 // JSON responseを解決したら、品番カテゴリと予測確率をバッジとして表示する
-function showCategoryBadges(pidMap: Map<string, number>) {
+function showCategoryBadges(pidMap: CategoryProba) {
   console.debug(pidMap);
   const msg = "AIが予測する品番カテゴリは次のいずれかです。";
   resultAlertLabel(msg, "alert-success");
-  Object.keys(pidMap).forEach((pid: string, i: number) => {
+
+  Object.keys(pidMap).forEach((pid: string, value: number) => {
     const badge = document.createElement("button");
     if (badge === null) return;
-    const proba: number = pidMap[pid].toPrecision(4) * 100; // 予測確率6桁 99.9999%
+    const proba: number = (pidMap[pid] || 0) * 100; // 予測確率6桁 99.9999%
+    const probaStr = proba.toPrecision(4);
+    // バッジ属性の付与
     badge.setAttribute("type", "button");
-    badge.setAttribute("title", `予測確率${proba}%`);
-    badge.classList.add("badge", "rounded-pill", badgeSelector(i)); // Bootstrap Badge
+    badge.setAttribute("title", `予測確率${probaStr}%`);
+    badge.classList.add("badge", "rounded-pill", badgeSelector(value)); // Bootstrap Badge
+
+    // バッジに表示するテキスト
     badge.innerHTML = pid; // PID カテゴリ
     // クリックすると類似品番を表示するjsを配置
-    badge.setAttribute("onclick", "getItem(this.textContent)");
-    resultDiv.appendChild(badge);
+    badge.addEventListener("click", () => getItem(pid));
+    if (resultDiv) {
+      resultDiv.appendChild(badge);
+    }
   });
 }
 
@@ -131,7 +148,7 @@ async function checkRegistered(data: Item) {
     .catch((e: Error) => {
       console.debug(e); // 品名、型式の完全一致が見つからなかった204エラー
       // POST /predict で品番予測
-      const url = root.origin + "/predict";
+      const url = root.origin + "/predict/category";
       postData(url, data)
         .then(showCategoryBadges)
         .catch((e: Error) => {
@@ -160,6 +177,7 @@ function createHeader(
     tr.appendChild(th); // thをtrへ追加
   });
   table.appendChild(theadElem);
+  return theadElem;
 }
 
 // APIで取得したJSON(Items型)でテーブル作成
@@ -168,7 +186,7 @@ function createTable(items: Map<string, Item>, caption: string) {
   exampleTable.innerHTML = ""; // Reset table
   // Write table header
   createHeader(
-    exampleTable, // table element
+    exampleTable as HTMLTableElement, // table element
     ["品番", "品名", "型式"], // header
     caption,
   );
@@ -251,7 +269,7 @@ function fetchList(partsName: string) {
   nameDataList.innerHTML = ""; // reset datalist
   modelDataList.innerHTML = ""; // reset datalist
   partsName = partsName.trim();
-  if (partsName === "") return;
+  if (partsName === "" || timeoutID === undefined) return;
   clearTimeout(timeoutID); // 前回のタイマーストップ
   timeoutID = setTimeout(() => {
     const url = `${root.origin}/search?limit=30&name=${partsName}`;
@@ -276,5 +294,48 @@ function fetchList(partsName: string) {
       .catch((resp) => {
         return new Error(`error: ${resp.status}: ${resp.statusText}`);
       });
-  }, 400); // 1.5秒入力がなければ、品名一覧をfetch
+  }, 400) as unknown as number; // 1.5秒入力がなければ、品名一覧をfetch
+  // typescript エラー回避のための2段階キャスト
 }
+
+// predict/misc テストページ用の機能
+function initPredictMiscPage() {
+  const predictForm = document.getElementById("predictForm");
+  if (!predictForm) return; // predict_misc.htmlでない場合は何もしない
+
+  predictForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const hinmei =
+      (document.getElementById("hinmei") as HTMLInputElement).value;
+    const threshold = parseFloat(
+      (document.getElementById("threshold") as HTMLInputElement).value,
+    );
+    const resultDisplay = document.getElementById("result") as HTMLPreElement;
+
+    try {
+      const response = await fetch("/predict/misc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: hinmei, threshold: threshold }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      resultDisplay.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      resultDisplay.textContent = "エラー: " + (error as Error).message;
+      console.error("Error:", error);
+    }
+  });
+}
+
+// ページ読み込み完了時に初期化
+document.addEventListener("DOMContentLoaded", () => {
+  initPredictMiscPage();
+});

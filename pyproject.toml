@@ -1,0 +1,31 @@
+[project]
+name = "pid_classify"
+version = "0.3.0"
+dependencies = [
+    "pandas",
+    "scikit-learn",
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "apscheduler",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    # ruffの仕様が初めてなので一応古いフォーマッタを書いておく
+    # black~=25.1.0
+    # flake8~=7.1.2
+    # isort~=6.0.1
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "httpx",
+    "debugpy",
+    "python-dotenv",
+    "tqdm",
+    "pre-commit",
+    "deptry",
+    "jupyter",
+]
