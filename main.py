@@ -127,7 +127,12 @@ async def train_models():
             classifier = Classifier.create_and_train(master)
 
             # 部品手配テーブルから諸口品マスタの作成
-            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 諸口品 = '諸口品'"
+            query = r"""
+                SELECT DISTINCT 品番,品名
+                FROM 部品手配
+                WHERE 品番
+                LIKE 'S\_%' ESCAPE '\';
+                """
 
             misc_df: pd.DataFrame = DataLoader.load(db_path, query)
             misc_master = MiscMaster(misc_df, metadata)
