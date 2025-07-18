@@ -30,7 +30,7 @@ from pid_classify.lib.pid_classify import (
     DataLoader,
 )
 
-VERSION = "v0.3.0r"
+VERSION = "v0.3.1"
 
 # 再学習間隔の設定（時間単位）
 RETRAIN_INTERVAL_HOURS = int(os.environ.get("RETRAIN_INTERVAL_HOURS", "1"))
@@ -42,9 +42,9 @@ PID_QUERY = "SELECT 品番, 品名, 型式 FROM 品番"
 MISC_QUERY = r"""
     SELECT DISTINCT 品番,品名
     FROM 部品手配
-    WHERE 品番
-    LIKE 'S\_%' ESCAPE '\';
-    """
+    WHERE 品番 LIKE 'S\_%' ESCAPE '\'
+    AND SUBSTRING(製番, LENGTH(製番) - 1, 1) = '4';
+    """  # 製番 下2桁目が'4'の製番のクエリ
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
