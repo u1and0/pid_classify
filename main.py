@@ -30,10 +30,21 @@ from pid_classify.lib.pid_classify import (
     DataLoader,
 )
 
-VERSION = "v0.3.0"
+VERSION = "v0.3.1"
 
 # 再学習間隔の設定（時間単位）
 RETRAIN_INTERVAL_HOURS = int(os.environ.get("RETRAIN_INTERVAL_HOURS", "1"))
+
+# 品番カテゴリ学習データを収集するためのSQLクエリ
+PID_QUERY = "SELECT 品番, 品名, 型式 FROM 品番"
+
+# 諸口品番学習データを収集するためのSQLクエリ
+MISC_QUERY = r"""
+    SELECT DISTINCT 品番,品名
+    FROM 部品手配
+    WHERE 品番 LIKE 'S\_%' ESCAPE '\'
+    AND SUBSTRING(製番, LENGTH(製番) - 1, 1) = '4';
+    """  # 製番 下2桁目が'4'の製番のクエリ
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -121,15 +132,12 @@ async def train_models():
             metadata = DataLoader.create_file_metadata(db_path)
 
             # 品番マスタの作成
-            query = "SELECT 品番, 品名, 型式 FROM 品番"
-            pid_df: pd.DataFrame = DataLoader.load(db_path, query)
+            pid_df = DataLoader.load(db_path, PID_QUERY)
             master = Master(pid_df, metadata)
             classifier = Classifier.create_and_train(master)
 
             # 部品手配テーブルから諸口品マスタの作成
-            query = "SELECT DISTINCT 品番,品名 FROM 部品手配 WHERE 諸口品 = '諸口品'"
-
-            misc_df: pd.DataFrame = DataLoader.load(db_path, query)
+            misc_df = DataLoader.load(db_path, MISC_QUERY)
             misc_master = MiscMaster(misc_df, metadata)
             misc_classifier = MiscClassifier.create_and_train(misc_master)
 
